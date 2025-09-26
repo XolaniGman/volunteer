@@ -38,7 +38,7 @@ export const DashboardHeader = ({ filter, onFilterChange, onNewWorkItem }: Dashb
   };
 
   return (
-    <div className="bg-gradient-to-r from-cyan-500 to-blue-500 to-black text-white p-6 shadow-elevated">
+    <div className="bg-gradient-to-r from-indigo-500 via-purple-500 to-purple-700 text-white p-6 shadow-elevated">
       <div className="container mx-auto space-y-4">
         {/* Title */}
         <div className="flex items-center justify-between">
@@ -95,15 +95,16 @@ export const DashboardHeader = ({ filter, onFilterChange, onNewWorkItem }: Dashb
         {/* Actions Bar */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <Button 
-              onClick={onNewWorkItem}
-              variant="secondary"
-              className="bg-white/20 hover:bg-white/30 text-white border-white/30"
-            >
-              <Plus className="w-4 h-4 mr-2" />
-              CREATE WORK ITEM
-            </Button>
-            
+            {isTableView && (
+              <Button 
+                onClick={onNewWorkItem}
+                variant="secondary"
+                className="bg-white/20 hover:bg-white/30 text-white border-white/30"
+              >
+                <Plus className="w-4 h-4 mr-2" />
+                CREATE WORK ITEM
+              </Button>
+            )}
             <div className="flex items-center gap-2">
               <div className="relative">
                 <Search className="w-4 h-4 absolute left-3 top-1/2 transform -translate-y-1/2 text-white/70" />

@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { format } from 'date-fns';
-import { doc, deleteDoc } from 'firebase/firestore';
+import { doc, deleteDoc, updateDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 
 
@@ -22,12 +22,13 @@ import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover
 import { Calendar } from '@/components/ui/calendar';
 import { Calendar as CalendarIcon, Link, Star } from 'lucide-react';
 
+
 interface WorkItemDetail {
   workItem: WorkItem;
   onBack: () => void;
   onSave: (workItem: WorkItem) => void;
   onDelete?: (id: string) => void;
-  onNext?: () => void; // if you want to use Next button
+  onNext?: () => void;
 }
 
 export const WorkItemDetail: React.FC<WorkItemDetail> = ({ workItem, onBack, onSave, onDelete, onNext }) => {
@@ -39,45 +40,24 @@ export const WorkItemDetail: React.FC<WorkItemDetail> = ({ workItem, onBack, onS
   const [summary, setSummary] = useState('');
   const [aiLoading, setAiLoading] = useState(false);
   const [aiError, setAiError] = useState('');
+
+  // Add missing state for requestedDate, url, dateCompleted
+  // Use activityDate for requestedDate, createdDate for dateCompleted
   const [requestedDate, setRequestedDate] = useState<Date | undefined>(
     workItem.activityDate ? new Date(workItem.activityDate) : undefined
   );
+  // No url field in WorkItem, so just use a local state for demonstration
+  const [url, setUrl] = useState<string>('');
   const [dateCompleted, setDateCompleted] = useState<Date | undefined>(
-    (workItem as any).completedDate ? new Date((workItem as any).completedDate) : undefined
+    workItem.createdDate ? new Date(workItem.createdDate) : undefined
   );
-  const [url, setUrl] = useState((workItem as any).url || '');
-
-  // Restrict access: only assigned user can see details
-  const currentUserEmail = user?.email;
-  if (workItem.assignedTo && workItem.assignedTo !== currentUserEmail) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="bg-white p-8 rounded shadow text-center">
-          <h2 className="text-xl font-bold mb-4">Access Denied</h2>
-          <p className="text-muted-foreground">You are not authorized to view this work item.</p>
-          <Button variant="outline" onClick={onBack} className="mt-4">Back</Button>
-        </div>
-      </div>
-    );
-  }
-
-  useEffect(() => {
-    setEditedItem((prev) => ({
-      ...prev,
-      activityDate: requestedDate ? requestedDate.toISOString() : '',
-      completedDate: dateCompleted ? dateCompleted.toISOString() : '',
-      url,
-    }));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [requestedDate, dateCompleted, url]);
 
 
 
   const handleSave = () => onSave(editedItem);
 
-  const handleDelete = async () => {
+  const handleDelete = () => {
     if (!onDelete) return;
-    if (!editedItem.id) return;
     if (window.confirm('Are you sure you want to delete this work item?')) {
       onDelete(editedItem.id);
     }
@@ -117,24 +97,38 @@ export const WorkItemDetail: React.FC<WorkItemDetail> = ({ workItem, onBack, onS
     );
   };
 
+  function handleNext(event: React.MouseEvent<HTMLButtonElement, MouseEvent>): void {
+    event.preventDefault();
+    if (onNext) {
+      onNext();
+    }
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-r from-cyan-500 to-blue-500">
-      <div className="max-w-2xl bg-gradient-to-r from-cyan-500 to-blue-500 mx-auto p-6">
+      <div className="max-w-4xl bg-gradient-to-r from-cyan-400 to-blue-500 to-black mx-auto p-6">
+        
         {/* Header */}
-        <div className="flex items-center gap-4 mb-6">
-          <Button variant="outline" onClick={onBack} size="sm">
-            <ArrowLeft className="w-4 h-4 mr-2" />
-            Back
-          </Button>
-          <Button variant="destructive" onClick={handleDelete} size="sm" className="ml-auto">
-            Delete
-          </Button>
-          {onNext && (
-            <Button variant="secondary" onClick={onNext} size="sm" className="ml-2">
-              Next
+      <div className="flex items-center gap-4 p-4 rounded-xl bg-white border border-gray-400 shadow-2xl backdrop-blur">
+            <Button variant="ghost" onClick={onBack} size="sm" className="text-gray-300 hover:text-white">
+              <ArrowLeft className="w-4 h-4 mr-2" />
+              Back
             </Button>
-          )}
-        </div>
+            <div className="flex items-center gap-2 text-gray-400">
+              <WorkItemIcon type={editedItem.type} className="w-5 h-5" />
+              <span className="uppercase tracking-wide text-xs">{editedItem.type}</span>
+            </div>
+            <div className="ml-auto flex gap-2">
+              <Button onClick={handleSave} className="bg-blue-600 hover:bg-blue-700">
+                <Save className="w-4 h-4 mr-2" /> Save
+              </Button>
+              {onDelete && (
+                <Button variant="destructive" onClick={handleDelete}>
+                  <Trash2 className="w-4 h-4 mr-2" /> Delete
+                </Button>
+              )}
+            </div>
+          </div>
 
         {/* Form */}
         <div className="bg-card rounded-lg border p-6 space-y-6">
@@ -280,10 +274,7 @@ export const WorkItemDetail: React.FC<WorkItemDetail> = ({ workItem, onBack, onS
             <p className="text-xs text-muted-foreground">Date</p>
           </div>
 
-          {/* Submit Button */}
-          <Button onClick={handleSave} className="w-32 bg-gray-800 hover:bg-gray-700 text-white">
-            Submit
-          </Button>
+        
         </div>
       </div>
     </div>

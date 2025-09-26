@@ -15,8 +15,10 @@ import WorkItemsTable from "./components/AdminWorkItemsTable";
 import DashboardLayout from "./components/DashboardLayout";
 import ProtectedRoute from "./components/ProtectedRoute";
 import Profile from "./components/Profile";
-import UserWorkItemsPage from "./components/work-item/UserWorkItemsPage";
+
 import { useAuth } from "@/Contexts/AuthContext";
+import VolunteerWorkOrder from "./pages/VolunteerWorkOrder";
+import Proof from "./pages/Proof";
 
 const queryClient = new QueryClient();
 
@@ -49,7 +51,7 @@ const App = () => {
                 </ProtectedRoute>
               }
             />
-             <Route
+            <Route
               path="/profile"
               element={
                 <ProtectedRoute>
@@ -57,20 +59,24 @@ const App = () => {
                 </ProtectedRoute>
               }
             />
-          {/* Dashboard routes */}
+            <Route path="proof" element={<ProtectedRoute>
+              <Proof />
+            </ProtectedRoute>} />
+            {/* Dashboard routes */}
             <Route path="dashboard" element={<DashboardLayout />}>
               <Route index element={<div>Welcome to Dashboard</div>} />
               <Route path="members" element={<MembersTable />} />
               <Route path="tasks" element={<WorkItemsTable />} />
-              <Route path="workitems" element={<UserWorkItemsPage userEmail={user?.email || ''} />} />
+
               <Route path="calendar" element={<div>Calendar Page</div>} />
+              <Route path="volunteer" element={<VolunteerWorkOrder />} />
             </Route>
-          {/* Catch-all */}
-          <Route path="*" element={<NotFound />} />
-        </Routes>
-      </BrowserRouter>
-    </TooltipProvider>
-  </QueryClientProvider>
+            {/* Catch-all */}
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </BrowserRouter>
+      </TooltipProvider>
+    </QueryClientProvider>
   );
 };
 

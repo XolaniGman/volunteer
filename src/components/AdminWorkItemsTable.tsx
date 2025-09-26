@@ -14,11 +14,14 @@ import { db } from '@/lib/firebase';
 import StatusBadge from './StatusBadge';
 import type { WorkItem } from '@/types/workItem';
 
+
 const AdminWorkItemsTable = () => {
   const [workItems, setWorkItems] = useState<WorkItem[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [justApprovedId, setJustApprovedId] = useState<string | null>(null);
+  const [search, setSearch] = useState("");
 
   useEffect(() => {
     const fetchItems = async () => {
@@ -56,41 +59,37 @@ const AdminWorkItemsTable = () => {
 
   const handleApprove = async (e: React.MouseEvent, id: string) => {
     e.stopPropagation();
-
+    setJustApprovedId(id); // Set immediately for instant feedback
     try {
       const itemRef = doc(db, 'workItems', id);
 
-      const approvedComment = {
-        id: Date.now().toString(),
-        author: 'system',
-        content: '✅',
-        createdAt: new Date().toISOString(),
-      };
-
-      // ✅ Update Firestore for that specific workItem
+      // Only update state to 'done', do not update comments
       await updateDoc(itemRef, {
-        comments: arrayUnion(approvedComment),
-        approved: true,        // <-- add a field directly to the document
-        approvedAt: new Date().toISOString(),
+        state: 'done',
       });
 
-      // ✅ Update local state for the same item
       setWorkItems((prev) =>
         prev.map((item) =>
           item.id === id
             ? {
               ...item,
-              comments: [...(item.comments || []), approvedComment],
-              approved: true,
-              approvedAt: new Date().toISOString(),
+              state: 'done',
             }
             : item
         )
       );
     } catch (err) {
       console.error('Failed to approve work item:', err);
+      setJustApprovedId(null); // Reset if error
     }
   };
+
+  const filteredItems = workItems.filter(
+    (item) =>
+      item.title.toLowerCase().includes(search.toLowerCase()) ||
+      (item.assignedTo && item.assignedTo.toLowerCase().includes(search.toLowerCase())) ||
+      item.state.toLowerCase().includes(search.toLowerCase())
+  );
 
 
 
@@ -99,6 +98,35 @@ const AdminWorkItemsTable = () => {
 
   return (
     <div className="bg-card rounded-lg shadow-card border">
+     <div className="mb-6 p-6 flex justify-end">
+  <div className="relative w-72">
+    <input
+      type="text"
+      placeholder="Search by title, assigned to, or state..."
+      value={search}
+      onChange={(e) => setSearch(e.target.value)}
+      className="w-full pl-10 pr-4 py-2 text-sm rounded-full border border-gray-300 shadow-sm 
+                 focus:ring-2 focus:ring-purple-500 focus:border-purple-500 
+                 placeholder-gray-400 text-gray-700 outline-none transition"
+    />
+    {/* 🔍 Search icon */}
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      className="h-5 w-5 text-gray-400 absolute left-3 top-2.5 pointer-events-none"
+      fill="none"
+      viewBox="0 0 24 24"
+      stroke="currentColor"
+    >
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth="2"
+        d="M21 21l-4.35-4.35M17 11a6 6 0 11-12 0 6 6 0 0112 0z"
+      />
+    </svg>
+  </div>
+</div>
+
       <Table>
         <TableHeader>
           <TableRow className="bg-muted/50">
@@ -114,7 +142,7 @@ const AdminWorkItemsTable = () => {
           </TableRow>
         </TableHeader>
         <TableBody>
-          {workItems.map((item) => (
+          {filteredItems.map((item) => (
             <TableRow
               key={item.id}
               onClick={() => setSelectedId(item.id)}
@@ -159,17 +187,10 @@ const AdminWorkItemsTable = () => {
                 {item.comments?.length ? (
                   <div className="flex items-center gap-1 text-muted-foreground">
                     <MessageSquare className="w-4 h-4" />
-                    {item.comments.some((c) => c.content === '✅') && (
-                      <span title="Approved" className="text-green-600 flex items-center">
-                        <CheckCircle className="w-4 h-4 mr-1" />
-                      </span>
-                    )}
                     <span className="text-sm">
-                      {item.comments.filter((c) => c.content !== '✅').length > 0
-                        ? item.comments.filter((c) => c.content !== '✅').map((c) => c.content).join(', ')
-                        : item.comments.some((c) => c.content === '✅')
-                          ? ''
-                          : '0'}
+                      {item.comments.length > 0
+                        ? item.comments.map((c) => c.content).join(', ')
+                        : '0'}
                     </span>
                   </div>
                 ) : (
@@ -182,25 +203,31 @@ const AdminWorkItemsTable = () => {
                   {item.createdDate ? new Date(item.createdDate).toLocaleDateString() : '-'}
                 </div>
               </TableCell>
+
               <TableCell>
                 {['done', 'doing', 'todo'].includes(item.state) && (
                   <button
                     className={
-                      item.state === 'done' && item.approved
+                      (item.state === 'done' || justApprovedId === item.id)
                         ? 'px-2 py-1 bg-green-600 text-white rounded text-xs cursor-not-allowed'
                         : 'px-2 py-1 bg-yellow-500 text-white rounded text-xs hover:bg-yellow-600'
                     }
-                    disabled={item.state === 'done' && item.approved}
+                    disabled={item.state === 'done' || justApprovedId === item.id}
                     onClick={(e) => {
-                      if (item.state === 'done' && !item.approved) {
+                      if (item.state !== 'done' && justApprovedId !== item.id) {
                         handleApprove(e, item.id);
                       }
                     }}
                   >
-                    {item.state === 'done' && item.approved ? 'Approved' : 'Approve'}
+                    {(item.state === 'done' || justApprovedId === item.id)
+                      ? 'Approved'
+                      : 'Approve'}
                   </button>
                 )}
               </TableCell>
+
+
+
               <TableCell>
                 <button
                   onClick={(e) => handleDelete(e, item.id)}

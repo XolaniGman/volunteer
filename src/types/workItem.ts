@@ -3,6 +3,7 @@ export type WorkItemState = 'todo' | 'doing' | 'done';
 export type WorkItemPriority = 1 | 2 | 3 | 4;
 
 export interface WorkItem {
+  approved: boolean;
   id: string;
   title: string;
   type: WorkItemType;
@@ -16,6 +17,8 @@ export interface WorkItem {
   comments: Comment[];
   activityDate: string;
   createdDate: string;
+  approvedAt?: string;
+  url?: string;
 }
 
 export interface Comment {

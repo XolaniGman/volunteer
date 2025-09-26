@@ -36,13 +36,20 @@ export const Dashboard = () => {
           <ListChecks className="w-4 h-4" />
           All Tasks
         </NavLink>
-        <NavLink to="/dashboard/tasks"
+        <NavLink to="/dashboard/volunteer"
           className="flex items-center gap-3 px-3 py-2 rounded hover:bg-white/10"
         >
           <CalendarDays className="w-4 h-4" />
-          Calendar
+         Contract
+        </NavLink>
+         <NavLink to="/dashboard/proof"
+          className="flex items-center gap-3 px-3 py-2 rounded hover:bg-white/10"
+        >
+          <CalendarDays className="w-4 h-4" />
+         Work Items Proof
         </NavLink>
       </nav>
+      
 
       {/* Bottom actions */}
       <div className="mt-auto p-4 space-y-2">
