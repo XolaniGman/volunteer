@@ -5,7 +5,6 @@ import { format } from 'date-fns';
 import { doc, deleteDoc, updateDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 
-
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -21,7 +20,6 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { Calendar as CalendarIcon, Link, Star } from 'lucide-react';
-
 
 interface WorkItemDetail {
   workItem: WorkItem;
@@ -51,8 +49,6 @@ export const WorkItemDetail: React.FC<WorkItemDetail> = ({ workItem, onBack, onS
   const [dateCompleted, setDateCompleted] = useState<Date | undefined>(
     workItem.createdDate ? new Date(workItem.createdDate) : undefined
   );
-
-
 
   const handleSave = () => onSave(editedItem);
 
@@ -105,38 +101,38 @@ export const WorkItemDetail: React.FC<WorkItemDetail> = ({ workItem, onBack, onS
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-r from-cyan-500 to-blue-500">
-      <div className="max-w-4xl bg-gradient-to-r from-cyan-400 to-blue-500 to-black mx-auto p-6">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50">
+      <div className="max-w-4xl mx-auto p-6">
         
         {/* Header */}
-      <div className="flex items-center gap-4 p-4 rounded-xl bg-white border border-gray-400 shadow-2xl backdrop-blur">
-            <Button variant="ghost" onClick={onBack} size="sm" className="text-gray-300 hover:text-white">
-              <ArrowLeft className="w-4 h-4 mr-2" />
-              Back
-            </Button>
-            <div className="flex items-center gap-2 text-gray-400">
-              <WorkItemIcon type={editedItem.type} className="w-5 h-5" />
-              <span className="uppercase tracking-wide text-xs">{editedItem.type}</span>
-            </div>
-            <div className="ml-auto flex gap-2">
-              <Button onClick={handleSave} className="bg-blue-600 hover:bg-blue-700">
-                <Save className="w-4 h-4 mr-2" /> Save
-              </Button>
-              {onDelete && (
-                <Button variant="destructive" onClick={handleDelete}>
-                  <Trash2 className="w-4 h-4 mr-2" /> Delete
-                </Button>
-              )}
-            </div>
+        <div className="flex items-center gap-4 p-4 rounded-xl bg-white border border-gray-200 shadow-lg mb-6">
+          <Button variant="ghost" onClick={onBack} size="sm" className="text-gray-600 hover:text-gray-900">
+            <ArrowLeft className="w-4 h-4 mr-2" />
+            Back
+          </Button>
+          <div className="flex items-center gap-2 text-gray-600">
+            <WorkItemIcon type={editedItem.type} className="w-5 h-5" />
+            <span className="uppercase tracking-wide text-xs">{editedItem.type}</span>
           </div>
+          <div className="ml-auto flex gap-2">
+            <Button onClick={handleSave} className="bg-blue-600 hover:bg-blue-700">
+              <Save className="w-4 h-4 mr-2" /> Save
+            </Button>
+            {onDelete && (
+              <Button variant="destructive" onClick={handleDelete}>
+                <Trash2 className="w-4 h-4 mr-2" /> Delete
+              </Button>
+            )}
+          </div>
+        </div>
 
         {/* Form */}
-        <div className="bg-card rounded-lg border p-6 space-y-6">
-          <h1 className="text-2xl font-semibold text-foreground mb-6">Volunteer Activity Details Form</h1>
+        <div className="bg-white rounded-lg border border-gray-200 p-6 space-y-6 shadow-sm">
+          <h1 className="text-2xl font-semibold text-gray-900 mb-6">Volunteer Activity Details Form</h1>
 
           {/* Title */}
           <div className="space-y-2">
-            <Label htmlFor="title" className="text-sm font-medium">Volunteer Activity Title</Label>
+            <Label htmlFor="title" className="text-sm font-medium text-gray-700">Volunteer Activity Title</Label>
             <Input
               id="title"
               value={editedItem.title}
@@ -147,7 +143,7 @@ export const WorkItemDetail: React.FC<WorkItemDetail> = ({ workItem, onBack, onS
 
           {/* Description */}
           <div className="space-y-2">
-            <Label htmlFor="description" className="text-sm font-medium">Volunteer Activity Description</Label>
+            <Label htmlFor="description" className="text-sm font-medium text-gray-700">Volunteer Activity Description</Label>
             <Textarea
               id="description"
               value={editedItem.description}
@@ -159,7 +155,7 @@ export const WorkItemDetail: React.FC<WorkItemDetail> = ({ workItem, onBack, onS
 
           {/* Area Path */}
           <div className="space-y-2">
-            <Label htmlFor="area" className="text-sm font-medium">Volunteer Category Path</Label>
+            <Label htmlFor="area" className="text-sm font-medium text-gray-700">Volunteer Category Path</Label>
             <Input
               id="area"
               value={editedItem.areaPath || ''}
@@ -170,7 +166,7 @@ export const WorkItemDetail: React.FC<WorkItemDetail> = ({ workItem, onBack, onS
 
           {/* Requested Date */}
           <div className="space-y-2">
-            <Label className="text-sm font-medium">Volunteer Starting Date</Label>
+            <Label className="text-sm font-medium text-gray-700">Volunteer Starting Date</Label>
             <Popover>
               <PopoverTrigger asChild>
                 <Button
@@ -194,18 +190,18 @@ export const WorkItemDetail: React.FC<WorkItemDetail> = ({ workItem, onBack, onS
                 />
               </PopoverContent>
             </Popover>
-            <p className="text-xs text-muted-foreground">Date</p>
+            <p className="text-xs text-gray-500">Date</p>
           </div>
 
           {/* Priority */}
           <div className="space-y-2">
-            <Label className="text-sm font-medium">Priority</Label>
+            <Label className="text-sm font-medium text-gray-700">Priority</Label>
             {renderStarRating(editedItem.priority)}
           </div>
 
           {/* Status */}
           <div className="space-y-3">
-            <Label className="text-sm font-medium">Status</Label>
+            <Label className="text-sm font-medium text-gray-700">Status</Label>
             <RadioGroup
               value={editedItem.state}
               onValueChange={(value: WorkItemState) =>
@@ -215,15 +211,15 @@ export const WorkItemDetail: React.FC<WorkItemDetail> = ({ workItem, onBack, onS
             >
               <div className="flex items-center space-x-2">
                 <RadioGroupItem value="todo" id="todo" />
-                <Label htmlFor="todo" className="text-sm">Not Started</Label>
+                <Label htmlFor="todo" className="text-sm text-gray-700">Not Started</Label>
               </div>
               <div className="flex items-center space-x-2">
                 <RadioGroupItem value="doing" id="doing" />
-                <Label htmlFor="doing" className="text-sm">In Progress</Label>
+                <Label htmlFor="doing" className="text-sm text-gray-700">In Progress</Label>
               </div>
               <div className="flex items-center space-x-2">
                 <RadioGroupItem value="done" id="done" />
-                <Label htmlFor="done" className="text-sm">Done</Label>
+                <Label htmlFor="done" className="text-sm text-gray-700">Done</Label>
               </div>
             </RadioGroup>
           </div>
@@ -247,7 +243,7 @@ export const WorkItemDetail: React.FC<WorkItemDetail> = ({ workItem, onBack, onS
 
           {/* Date Completed */}
           <div className="space-y-2">
-            <Label className="text-sm font-medium">Date Completed Activity</Label>
+            <Label className="text-sm font-medium text-gray-700">Date Completed Activity</Label>
             <Popover>
               <PopoverTrigger asChild>
                 <Button
@@ -271,10 +267,8 @@ export const WorkItemDetail: React.FC<WorkItemDetail> = ({ workItem, onBack, onS
                 />
               </PopoverContent>
             </Popover>
-            <p className="text-xs text-muted-foreground">Date</p>
+            <p className="text-xs text-gray-500">Date</p>
           </div>
-
-        
         </div>
       </div>
     </div>

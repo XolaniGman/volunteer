@@ -15,21 +15,30 @@ const Login = () => {
   const navigate = useNavigate();
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-    try {
-      await signInWithEmailAndPassword(auth, email, password);
-      navigate('/');
-    } catch (e: any) {
-      toast({
-        title: 'Login failed',
-        description: e.message ?? 'Please try again.',
-        variant: 'destructive' as any,
-      });
-    } finally {
-      setLoading(false);
+  e.preventDefault();
+  setLoading(true);
+
+  try {
+    // Check for hardcoded admin login
+    if (email === "admin@outlook.com" && password === "12@admin") {
+      navigate("/dashboard");
+      return;
     }
-  };
+
+    // Otherwise fallback to Firebase login
+    await signInWithEmailAndPassword(auth, email, password);
+    navigate("/");
+  } catch (e: any) {
+    toast({
+      title: "Login failed",
+      description: e.message ?? "Please try again.",
+      variant: "destructive" as any,
+    });
+  } finally {
+    setLoading(false);
+  }
+};
+
 
   return (
     <div className="min-h-screen flex flex-col md:flex-row items-center justify-center bg-gradient-to-r from-indigo-100 via-white to-purple-100">

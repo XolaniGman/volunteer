@@ -70,7 +70,7 @@ const VolunteerWaiver: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-100 p-8 font-sans space-y-12">
+    <div className="min-h-screen bg-white-100 p-8 font-sans space-y-12">
       <button
         onClick={handleDownloadPDF}
         className="mb-4 px-4 py-2 bg-blue-600 text-white rounded shadow hover:bg-blue-700"
@@ -79,7 +79,7 @@ const VolunteerWaiver: React.FC = () => {
       </button>
       <div id="volunteer-workorder-pdf">
         {/* ---------------- Page 1 ---------------- */}
-        <div className="bg-white w-full max-w-3xl mx-auto shadow-lg border">
+        <div className="bg-white w-full max-w-5xl mx-auto shadow-lg border">
           <div className="relative bg-purple-200 p-6">
             <div className="absolute top-0 left-0 p-3">
               <img
@@ -149,7 +149,7 @@ const VolunteerWaiver: React.FC = () => {
           </div>
         </div>
         {/* ---------------- Page 2 ---------------- */}
-        <div className="bg-white w-full max-w-3xl mx-auto shadow-lg border">
+        <div className="bg-white w-full p-6 max-w-5xl mx-auto shadow-lg border">
           {/* Header with logo */}
           <div className="relative bg-purple-200 p-6">
             <div className="absolute top-0 left-0 p-3">

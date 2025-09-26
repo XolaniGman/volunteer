@@ -176,8 +176,7 @@ export const WorkItemsTable = ({
             <TableHead>Assigned To</TableHead>
             <TableHead>State</TableHead>
           
-            <TableHead>URL</TableHead>
-            <TableHead className="w-16">Comments</TableHead>
+           
             <TableHead>Activity Date</TableHead>
             <TableHead className="w-20">Approval</TableHead>
 
@@ -216,7 +215,7 @@ export const WorkItemsTable = ({
                 <StatusBadge state={item.state} />
               </TableCell>
               
-              <TableCell>
+              {/* <TableCell>
                 {'url' in item && item.url ? (
                   <button
                     className="px-2 py-1 bg-blue-500 text-white rounded text-xs hover:bg-blue-600"
@@ -254,7 +253,7 @@ export const WorkItemsTable = ({
                 ) : (
                   <span className="text-muted-foreground">0</span>
                 )}
-              </TableCell>
+              </TableCell> */}
               <TableCell className="text-sm text-muted-foreground">
                 <div className="flex items-center gap-1">
                   <Calendar className="w-4 h-4" />

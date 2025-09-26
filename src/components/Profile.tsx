@@ -4,6 +4,8 @@ import { db } from "@/lib/firebase";
 import { doc, getDoc, setDoc, deleteDoc } from "firebase/firestore";
 import { DashboardHeader } from "@/components/Dashboard/DashboardHeader";
 import { WorkItemFilter } from "@/types/workItem";
+import Proof from "@/pages/Proof";
+import VolunteerWorkOrder from "@/pages/VolunteerWorkOrder";
 
 interface ProfileData {
   uid: string;
@@ -109,7 +111,7 @@ const Profile = () => {
   if (!user) return <div>Please log in to view your profile.</div>;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-100 via-purple-100 to-pink-100">
+    <div className="min-h-screen  bg-gradient-to-br from-blue-100 via-purple-100 to-pink-100">
       {/* Shared Dashboard Header */}
       <DashboardHeader
         filter={filter}
@@ -118,8 +120,8 @@ const Profile = () => {
       />
 
       {/* Profile Content */}
-      <div className="container mx-auto p-6">
-        <div className="max-w-5xl mx-auto bg-white shadow-2xl rounded-xl overflow-hidden flex">
+      <div className="container  mx-auto p-6">
+        <div className="max-w-10xl mx-auto bg-white shadow-2xl rounded-xl overflow-hidden flex">
           {/* Left Sidebar */}
           <div className="w-1/3 bg-gradient-to-b from-blue-600 to-purple-700 text-white p-6 flex flex-col items-center">
             <div className="h-28 w-28 rounded-full bg-white text-blue-600 flex items-center justify-center text-3xl font-bold shadow-md">
@@ -237,7 +239,11 @@ const Profile = () => {
               </form>
             )}
           </div>
-        </div>
+          
+         
+        </div> <div className="max-w-9xl gap-4 text-sm">
+             <VolunteerWorkOrder/>
+           </div>
       </div>
     </div>
   );
