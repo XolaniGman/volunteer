@@ -8,6 +8,8 @@ import { useToast } from '@/hooks/use-toast';
 import { WorkItemDetail } from '@/components/work-item/WorkItemDetail';
 import { getAuth } from 'firebase/auth';
 import { fetchAllWorkItems } from '@/services/workItems';
+import  StatCard  from '@/components/Dashboard/StatCard';
+
 
 export const WorkItems = () => {
   const auth = getAuth();
@@ -156,63 +158,7 @@ export const WorkItems = () => {
       />
       <div className="container mx-auto p-6 space-y-6">
         {/* Members Section with Stats */}
-        <section>
-          <h2 className="text-lg font-semibold p-5 text-foreground mb-4">ANALYSED UPDATE</h2>
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <StatsCard 
-              title="Total work items completed" 
-              value={stats.completedTasks}
-            />
-            <StatsCard 
-              title="Total success rate" 
-              value={`${stats.successRate}%`}
-            />
-            <StatsCard 
-              title="Total work items" 
-              value={stats.totalTasks}
-            />
-            <StatsCard 
-              title="In progress" 
-              value={stats.inProgress}
-            />
-          </div>
-        </section>
-
-        {/* Teams Section */}
-        <section>
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-semibold p-5 text-foreground">CATAGORY</h2>
-            
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {teamGroups.map((team) => (
-              <TeamCard
-                key={team.teamName}
-                teamName={team.teamName}
-                workItems={team.workItems}
-              />
-            ))}
-          </div>
-        </section>
-
-        {/* Work Items Section */}
-        <section>
-          <div className="flex items-center border justify-between mb-4">
-            <h2 className="text-lg font-semibold p-5 text-foreground">WORK ITEMS</h2>
-            <p className="text-sm text-muted-foreground">
-              Showing {filteredWorkItems.length} of {workItems.length} work items
-            </p>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {filteredWorkItems.map((workItem) => (
-              <WorkItemCard
-                key={workItem.id}
-                workItem={workItem}
-                onClick={handleWorkItemClick}
-              />
-            ))}
-          </div>
-        </section>
+   <StatCard/>
       </div>
     </div>
   );

@@ -24,6 +24,8 @@ interface Profile {
   city?: string;
   medicalAid?: boolean;
   medicalAidName?: string;
+  volunteerSignature?: string;
+  dateCreated?: string;
 }
 
 const VolunteerWaiver: React.FC = () => {
@@ -162,11 +164,13 @@ const VolunteerWaiver: React.FC = () => {
             </div>
             <div className="relative z-10 text-right">
               <h2 className="text-xs font-semibold text-gray-700">
-                Ridgehill Foundation
+                Durban University of Technology (DUT)
               </h2>
-              <p className="text-xs text-gray-600">Beaverton, OR 97006</p>
-              <p className="text-xs text-gray-600">info@ridgehillfoundation.org</p>
-              <p className="text-xs text-gray-600">222 555 7777</p>
+              <p className="text-xs text-gray-600">Steve Biko Campus</p>
+              <p className="text-xs text-gray-600">115 Steve Biko Road, Berea</p>
+              <p className="text-xs text-gray-600">Durban, 4001, South Africa</p>
+              <p className="text-xs text-gray-600">info@dut.ac.za</p>
+              <p className="text-xs text-gray-600">+27 31 373 2000</p>
             </div>
           </div>
           {/* Title */}
@@ -208,27 +212,28 @@ const VolunteerWaiver: React.FC = () => {
               No volunteers under 18 years of age are allowed to volunteer at DUT.
             </p>
             {/* Signature section */}
-            <div className="grid grid-cols-2 gap-8 mt-6">
+            <div className="grid grid-cols-2  gap-8 mt-6">
               <div>
                 <p className="font-semibold">Volunteer Signature:</p>
-                <div className="border-b border-gray-400 h-6"></div>
+                <div className="border-b  border-gray-400 h-12">
+                  {profile.volunteerSignature && profile.volunteerSignature.startsWith('data:image') ? (
+                    <img
+                      src={profile.volunteerSignature}
+                      alt="Volunteer Signature"
+                      style={{ maxHeight: '64px', maxWidth: '100%', objectFit: 'contain', display: 'block' }}
+                    />
+                  ) : (
+                    "-"
+                  )}
+                </div>
               </div>
               <div>
                 <p className="font-semibold">Date:</p>
-                <div className="border-b border-gray-400 h-6"></div>
+                <div className="border-b border-gray-400 h-12">{profile.dateCreated ? new Date(profile.dateCreated).toLocaleDateString() : "-"}</div>
               </div>
             </div>
             <div className="grid grid-cols-2 gap-8 mt-6">
-              <div>
-                <p className="font-semibold">
-                  Volunteer Project - Address of Execution:
-                </p>
-                <div className="border-b border-gray-400 h-6"></div>
-              </div>
-              <div>
-                <p className="font-semibold">Project Date:</p>
-                <div className="border-b border-gray-400 h-6"></div>
-              </div>
+              
             </div>
             <div className="mt-6">
               <p className="font-semibold">Approved by:</p>

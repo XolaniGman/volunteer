@@ -1,11 +1,12 @@
 import { useEffect, useState } from "react";
 import { getAuth } from "firebase/auth";
 import { db } from "@/lib/firebase";
-import { doc, getDoc, setDoc, deleteDoc } from "firebase/firestore";
-import { DashboardHeader } from "@/components/Dashboard/DashboardHeader";
+import { doc, getDoc, setDoc, updateDoc, deleteDoc } from "firebase/firestore";
+
+import { Mail, Phone, MapPin, Calendar, User } from "lucide-react";
+import { DashboardHeader } from "./Dashboard/DashboardHeader";
 import { WorkItemFilter } from "@/types/workItem";
-import Proof from "@/pages/Proof";
-import VolunteerWorkOrder from "@/pages/VolunteerWorkOrder";
+import VolunteerWorkOrder from "../pages/VolunteerWorkOrder";
 
 interface ProfileData {
   uid: string;
@@ -24,23 +25,23 @@ interface ProfileData {
   medicalAidName?: string;
 }
 
+const defaultFilter: WorkItemFilter = {
+  types: [],
+  states: [],
+  assignedTo: [],
+  search: "",
+};
+
 const Profile = () => {
   const [profile, setProfile] = useState<ProfileData | null>(null);
   const [loading, setLoading] = useState(true);
   const [editMode, setEditMode] = useState(false);
-  const [form, setForm] = useState<Partial<ProfileData>>({});
+  const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [filter, setFilter] = useState<WorkItemFilter>(defaultFilter);
 
   const auth = getAuth();
   const user = auth.currentUser;
-
-  // Dummy filter state so DashboardHeader works
-  const [filter, setFilter] = useState<WorkItemFilter>({
-    types: [],
-    states: [],
-    assignedTo: [],
-    search: "",
-  });
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -50,21 +51,13 @@ const Profile = () => {
         const docSnap = await getDoc(docRef);
         if (docSnap.exists()) {
           setProfile(docSnap.data() as ProfileData);
-          setForm(docSnap.data() as ProfileData);
         } else {
           setProfile({
             uid: user.uid,
             email: user.email || "",
             displayName: user.displayName || "",
           });
-          setForm({
-            uid: user.uid,
-            email: user.email || "",
-            displayName: user.displayName || "",
-          });
         }
-      } catch (err) {
-        setError("Failed to fetch profile.");
       } finally {
         setLoading(false);
       }
@@ -73,179 +66,438 @@ const Profile = () => {
   }, [user]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value, type, checked } = e.target;
-    setForm((prev) => ({
-      ...prev,
-      [name]: type === "checkbox" ? checked : value,
-    }));
+    if (!profile) return;
+    setProfile({ ...profile, [e.target.name]: e.target.value });
   };
 
   const handleSave = async () => {
-    if (!user) return;
+    if (!profile) return;
+    setSaving(true);
+    setError(null);
     try {
-      const docRef = doc(db, "profiles", user.uid);
-      await setDoc(docRef, { ...form, uid: user.uid }, { merge: true });
-      setProfile({ ...(profile || {}), ...form, uid: user.uid } as ProfileData);
+      const docRef = doc(db, "profiles", profile.uid);
+      await setDoc(docRef, profile, { merge: true });
       setEditMode(false);
-      setError(null);
-    } catch {
-      setError("Failed to save profile.");
+    } catch (err) {
+      setError("Failed to save profile");
+    } finally {
+      setSaving(false);
     }
   };
 
   const handleDelete = async () => {
-    if (!user) return;
-    if (!window.confirm("Are you sure you want to delete your profile?")) return;
+    if (!profile) return;
+    setSaving(true);
+    setError(null);
     try {
-      const docRef = doc(db, "profiles", user.uid);
+      const docRef = doc(db, "profiles", profile.uid);
       await deleteDoc(docRef);
       setProfile(null);
-      setForm({});
-      setError(null);
-    } catch {
-      setError("Failed to delete profile.");
+    } catch (err) {
+      setError("Failed to delete profile");
+    } finally {
+      setSaving(false);
     }
   };
 
   if (loading) return <div>Loading...</div>;
-  if (!user) return <div>Please log in to view your profile.</div>;
+  if (!user || !profile) return <div>Please log in to view your profile.</div>;
 
   return (
-    <div className="min-h-screen  bg-gradient-to-br from-blue-100 via-purple-100 to-pink-100">
-      {/* Shared Dashboard Header */}
-      <DashboardHeader
-        filter={filter}
-        onFilterChange={setFilter}
-        onNewWorkItem={() => {}}
-      />
+    <>
+      
+      <div className="min-h-screen bg-gray-100">
+        {/* Dashboard Header */}
+        <DashboardHeader
+          filter={filter}
+          onFilterChange={setFilter}
+          onNewWorkItem={() => { }}
+        />
 
-      {/* Profile Content */}
-      <div className="container  mx-auto p-6">
-        <div className="max-w-10xl mx-auto bg-white shadow-2xl rounded-xl overflow-hidden flex">
-          {/* Left Sidebar */}
-          <div className="w-1/3 bg-gradient-to-b from-blue-600 to-purple-700 text-white p-6 flex flex-col items-center">
-            <div className="h-28 w-28 rounded-full bg-white text-blue-600 flex items-center justify-center text-3xl font-bold shadow-md">
-              {profile?.displayName?.charAt(0) || "?"}
-            </div>
-            <h2 className="mt-4 text-xl font-semibold">{profile?.displayName}</h2>
-            <p className="text-sm text-blue-100">{profile?.email}</p>
+        <div className="min-h-screen bg-blue-100 flex  justify-center py-10">
+          <div className="w-full max-w-7xl bg-white rounded-xl shadow-lg overflow-hidden">
+            <div className="flex">
+              {/* Left Sidebar */}
+              <div className="w-1/3 border-r p-6 bg-gray-50">
+                {/* Avatar */}
+                <div className="h-36 w-36 rounded-lg overflow-hidden mx-auto shadow-md">
+                  <img
+                    src="https://via.placeholder.com/150"
+                    alt={profile.displayName}
+                    className="h-full w-full object-cover"
+                  />
+                </div>
 
-            <div className="mt-6 space-y-2 text-sm">
-              <p><span className="font-medium">Department:</span> {profile?.department || "-"}</p>
-              <p><span className="font-medium">ID Number:</span> {profile?.idNumber || "-"}</p>
-              <p><span className="font-medium">Staff/Student No:</span> {profile?.studentOrStaffNumber || "-"}</p>
-              <p><span className="font-medium">Emergency:</span> {profile?.emergencyContactName || "-"}</p>
-            </div>
-          </div>
-
-          {/* Right Content */}
-          <div className="w-2/3 p-8 space-y-6">
-            {error && <div className="text-red-500">{error}</div>}
-
-            {!editMode ? (
-              <>
-                {/* Personal Info */}
-                <div>
-                  <h3 className="text-lg font-semibold text-gray-800 border-b pb-2 mb-3">
-                    Personal Information
+                {/* Work Section */}
+                <div className="mt-6">
+                  <h3 className="text-sm font-semibold text-gray-700 uppercase tracking-wide mb-2">
+                    SCHOOL
                   </h3>
-                  <div className="grid grid-cols-2 gap-4 text-sm">
-                    <div><span className="font-medium">Date:</span> {profile?.date || "-"}</div>
-                    <div><span className="font-medium">Medical Aid:</span> {profile?.medicalAid ? "Yes" : "No"}</div>
-                    <div><span className="font-medium">Medical Aid Name:</span> {profile?.medicalAidName || "-"}</div>
+                  <ul className="space-y-2 text-sm text-gray-600">
+                    <li className="space-y-2 p-2 border-b font-medium">
+
+                      {profile.department || <span className="text-gray-400 ">-</span>}
+
+                      <span className="ml-2 text-xs text-white bg-blue-500 rounded px-2 py-0.5">
+                        Deparment
+                      </span>
+                      <p className="text-xs text-blue-900">
+                        faculty of Accounting and Informatics
+                      </p>
+                    </li>
+                    <li className="space-y-2 p-2 border-b font-medium">
+                      {profile.studentOrStaffNumber || <span className="text-gray-400">-</span>}
+                      <span className="ml-2 text-xs text-white bg-indigo-500 rounded px-2 py-0.5">
+                        Student / Staff Number
+                      </span>
+                      <p className="text-xs text-blue-900">
+                        Durban University Of Technology
+                      </p>
+                    </li>
+                    <li className="space-y-2 p-2 border-b font-medium">
+                      {profile.idNumber || <span className="text-gray-400">-</span>}
+                      <span className="ml-2 text-xs text-white bg-indigo-500 rounded px-2 py-0.5">
+                        ID Number
+                      </span>
+                      <p className="text-xs text-blue-900">
+                        South Africa
+                      </p>
+                    </li>
+                  </ul>
+                </div>
+
+                {/* Skills Section */}
+                <div className="mt-6">
+                  <h3 className="text-sm font-semibold text-gray-700 uppercase tracking-wide mb-2">
+                    ADDRESS
+                  </h3>
+                  <ul className="text-sm text-gray-600 space-y-1">
+                    <li className="flex items-center gap-2">
+                      <MapPin className="w-4 h-4 text-gray-500" />
+                      <span className="font-medium">City:</span> {profile.city || <span className="text-gray-400">-</span>}
+                    </li>
+                    <li className="flex items-center gap-2">
+                      <MapPin className="w-4 h-4 text-gray-500" />
+                      <span className="font-medium">Province:</span> {profile.province || <span className="text-gray-400">-</span>}
+                    </li>
+                    <li className="flex items-center gap-2">
+                      <MapPin className="w-4 h-4 text-gray-500" />
+                      <span className="font-medium">Physical Address 1:</span> {profile.physicalAddressLine1 || <span className="text-gray-400">-</span>}
+                    </li>
+                    <li className="flex items-center gap-2">
+                      <MapPin className="w-4 h-4 text-gray-500" />
+                      <span className="font-medium">Physical Address 2:</span> {profile.physicalAddressLine2 || <span className="text-gray-400">-</span>}
+                    </li>
+                  </ul>
+                </div>
+              </div>
+
+              {/* Right Content */}
+              <div className="w-2/3 p-8">
+                {/* Header */}
+                <div className="flex justify-between items-start">
+                  <div className="space-y-2">
+                    <h2 className="text-2xl font-bold text-gray-900">
+                      {editMode ? (
+                        <input
+                          className="border rounded px-2 py-1 text-lg"
+                          name="displayName"
+                          value={profile.displayName}
+                          onChange={handleChange}
+                        />
+                      ) : (
+                        profile.displayName
+                      )}
+                    </h2>
+                    <p className="text-blue-600 text-sm">
+                      {editMode ? (
+                        <input
+                          className="border rounded px-2 py-1"
+                          name="department"
+                          value={profile.department || ""}
+                          onChange={handleChange}
+                        />
+                      ) : (
+                        profile.department || "Product Designer"
+                      )}
+                    </p>
+                    <p className="text-gray-500 text-sm">
+                      {editMode ? (
+                        <input
+                          className="border rounded px-2 py-1"
+                          name="city"
+                          value={profile.city || ""}
+                          onChange={handleChange}
+                        />
+                      ) : (
+                        profile.city || "New York, NY"
+                      )}
+                    </p>
+                    {editMode && (
+                      <>
+                        <input
+                          className="border rounded px-2 py-1 mt-1"
+                          name="idNumber"
+                          placeholder="ID Number"
+                          value={profile.idNumber || ""}
+                          onChange={handleChange}
+                        />
+                        <input
+                          className="border rounded px-2 py-1 mt-1"
+                          name="studentOrStaffNumber"
+                          placeholder="Student/Staff Number"
+                          value={profile.studentOrStaffNumber || ""}
+                          onChange={handleChange}
+                        />
+                        <input
+                          className="border rounded px-2 py-1 mt-1"
+                          name="emergencyContactName"
+                          placeholder="Emergency Contact Name"
+                          value={profile.emergencyContactName || ""}
+                          onChange={handleChange}
+                        />
+                        <input
+                          className="border rounded px-2 py-1 mt-1"
+                          name="physicalAddressLine1"
+                          placeholder="Physical Address Line 1"
+                          value={profile.physicalAddressLine1 || ""}
+                          onChange={handleChange}
+                        />
+                        <input
+                          className="border rounded px-2 py-1 mt-1"
+                          name="physicalAddressLine2"
+                          placeholder="Physical Address Line 2"
+                          value={profile.physicalAddressLine2 || ""}
+                          onChange={handleChange}
+                        />
+                        <input
+                          className="border rounded px-2 py-1 mt-1"
+                          name="province"
+                          placeholder="Province"
+                          value={profile.province || ""}
+                          onChange={handleChange}
+                        />
+                        <input
+                          className="border rounded px-2 py-1 mt-1"
+                          name="medicalAidName"
+                          placeholder="Medical Aid Name"
+                          value={profile.medicalAidName || ""}
+                          onChange={handleChange}
+                        />
+                        <label className="flex items-center gap-2 mt-1 text-sm">
+                          <input
+                            type="checkbox"
+                            name="medicalAid"
+                            checked={!!profile.medicalAid}
+                            onChange={e => setProfile({ ...profile, medicalAid: e.target.checked })}
+                          />
+                          Medical Aid
+                        </label>
+                      </>
+                    )}
+                  </div>
+                  <div className="text-right">
+                    <p className="text-gray-600 text-sm">Earnings</p>
+                    <p className="text-lg font-semibold text-gray-800">8,6 ⭐⭐⭐⭐☆</p>
                   </div>
                 </div>
 
-                {/* Address */}
-                <div>
-                  <h3 className="text-lg font-semibold text-gray-800 border-b pb-2 mb-3">
-                    Address
-                  </h3>
-                  <div className="grid grid-cols-2 gap-4 text-sm">
-                    <div><span className="font-medium">Line 1:</span> {profile?.physicalAddressLine1 || "-"}</div>
-                    <div><span className="font-medium">Line 2:</span> {profile?.physicalAddressLine2 || "-"}</div>
-                    <div><span className="font-medium">Province:</span> {profile?.province || "-"}</div>
-                    <div><span className="font-medium">City:</span> {profile?.city || "-"}</div>
-                  </div>
+                {/* Action Buttons */}
+                <div className="mt-4 flex items-center gap-3">
+                  {editMode ? (
+                    <>
+                      <button
+                        className="px-4 py-2 bg-green-600 text-white rounded-md text-sm font-medium hover:bg-green-700"
+                        onClick={handleSave}
+                        disabled={saving}
+                      >
+                        {saving ? "Saving..." : "Save"}
+                      </button>
+                      <button
+                        className="px-4 py-2 bg-gray-100 text-gray-800 rounded-md text-sm font-medium hover:bg-gray-200"
+                        onClick={() => setEditMode(false)}
+                        disabled={saving}
+                      >
+                        Cancel
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      <button
+                        className="px-4 py-2 bg-blue-600 text-white rounded-md text-sm font-medium hover:bg-blue-700"
+                        onClick={() => setEditMode(true)}
+                      >
+                        Edit Profile
+                      </button>
+                      <button
+                        className="px-4 py-2 bg-red-600 text-white rounded-md text-sm font-medium hover:bg-red-700"
+                        onClick={handleDelete}
+                        disabled={saving}
+                      >
+                        Delete Profile
+                      </button>
+                    </>
+                  )}
+                </div>
+                {error && <div className="text-red-500 mt-2">{error}</div>}
+
+                {/* Tabs */}
+                <div className="mt-6 border-b flex gap-6 text-sm text-gray-600">
+                  <button className="pb-2 border-b-2 border-blue-600 font-medium text-blue-600">
+                    About
+                  </button>
+                  <button className="pb-2 hover:text-blue-600">Timeline</button>
                 </div>
 
-                {/* Actions */}
-                <div className="flex gap-3 pt-4">
-                  <button
-                    onClick={() => setEditMode(true)}
-                    className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg shadow"
-                  >
-                    Edit Profile
-                  </button>
-                  <button
-                    onClick={handleDelete}
-                    className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg shadow"
-                  >
-                    Delete Profile
-                  </button>
+                {/* Contact Info */}
+                <div className="mt-6">
+                  <h3 className="text-base font-semibold text-gray-800 mb-3">
+                    Contact Information
+                  </h3>
+                  <ul className="space-y-2 text-sm text-gray-700">
+                    <li className="flex items-center gap-2">
+                      <Phone className="w-4 h-4 text-gray-500" /> +27 000 000 0000
+                    </li>
+                    <li className="flex items-center gap-2">
+                      <MapPin className="w-4 h-4 text-gray-500" />{' '}
+                      {editMode ? (
+                        <input
+                          className="border rounded px-2 py-1"
+                          name="physicalAddressLine1"
+                          value={profile.physicalAddressLine1 || ""}
+                          onChange={handleChange}
+                        />
+                      ) : (
+                        profile.physicalAddressLine1 || "525 E 68th Street, NY"
+                      )}
+                    </li>
+                    <li className="flex items-center gap-2">
+                      <Mail className="w-4 h-4 text-gray-500" /> {profile.email}
+                    </li>
+                    <li className="flex items-center gap-2">
+                      <User className="w-4 h-4 text-gray-500" /> {profile.displayName}
+                    </li>
+                    {editMode && (
+                      <>
+                        <li className="flex items-center gap-2">
+                          <span className="font-medium">ID Number:</span>
+                          <input
+                            className="border rounded px-2 py-1"
+                            name="idNumber"
+                            value={profile.idNumber || ""}
+                            onChange={handleChange}
+                          />
+                        </li>
+                        <li className="flex items-center gap-2">
+                          <span className="font-medium">Student/Staff Number:</span>
+                          <input
+                            className="border rounded px-2 py-1"
+                            name="studentOrStaffNumber"
+                            value={profile.studentOrStaffNumber || ""}
+                            onChange={handleChange}
+                          />
+                        </li>
+                        <li className="flex items-center gap-2">
+                          <span className="font-medium">Emergency Contact Name:</span>
+                          <input
+                            className="border rounded px-2 py-1"
+                            name="emergencyContactName"
+                            value={profile.emergencyContactName || ""}
+                            onChange={handleChange}
+                          />
+                        </li>
+                        <li className="flex items-center gap-2">
+                          <span className="font-medium">Physical Address Line 2:</span>
+                          <input
+                            className="border rounded px-2 py-1"
+                            name="physicalAddressLine2"
+                            value={profile.physicalAddressLine2 || ""}
+                            onChange={handleChange}
+                          />
+                        </li>
+                        <li className="flex items-center gap-2">
+                          <span className="font-medium">Province:</span>
+                          <input
+                            className="border rounded px-2 py-1"
+                            name="province"
+                            value={profile.province || ""}
+                            onChange={handleChange}
+                          />
+                        </li>
+                        <li className="flex items-center gap-2">
+                          <span className="font-medium">Medical Aid Name:</span>
+                          <input
+                            className="border rounded px-2 py-1"
+                            name="medicalAidName"
+                            value={profile.medicalAidName || ""}
+                            onChange={handleChange}
+                          />
+                        </li>
+                        <li className="flex items-center gap-2">
+                          <span className="font-medium">Medical Aid:</span>
+                          <input
+                            type="checkbox"
+                            name="medicalAid"
+                            checked={!!profile.medicalAid}
+                            onChange={e => setProfile({ ...profile, medicalAid: e.target.checked })}
+                          />
+                        </li>
+                      </>
+                    )}
+                  </ul>
                 </div>
-              </>
-            ) : (
-              // Edit Form
-              <form
-                onSubmit={(e) => {
-                  e.preventDefault();
-                  handleSave();
-                }}
-                className="space-y-4"
-              >
-                <div>
-                  <label className="block text-sm font-medium">Name</label>
-                  <input
-                    className="border rounded px-3 py-2 w-full"
-                    name="displayName"
-                    value={form.displayName || ""}
-                    onChange={handleChange}
-                  />
+                {/* Basic Info */}
+                <div className="mt-6">
+                  <h3 className="text-base font-semibold text-gray-800 mb-3">
+                    Basic Information
+                  </h3>
+                  <ul className="space-y-2 text-sm text-gray-700">
+                    <li>
+                      <span className="font-medium">Volunteer Starting date:</span>{' '}
+                      {editMode ? (
+                        <input
+                          className="border rounded px-2 py-1"
+                          name="date"
+                          type="date"
+                          value={profile.date ? profile.date.slice(0, 10) : ""}
+                          onChange={handleChange}
+                        />
+                      ) : (
+                        profile.date ? profile.date.slice(0, 10) : <span className="text-gray-400">-</span>
+                      )}
+                    </li>
+                    <li>
+                      <span className="font-medium">Gender:</span> Male
+                    </li>
+                  </ul>
                 </div>
-                <div>
-                  <label className="block text-sm font-medium">Department</label>
-                  <input
-                    className="border rounded px-3 py-2 w-full"
-                    name="department"
-                    value={form.department || ""}
-                    onChange={handleChange}
-                  />
+
+                {/* Profile Details Section - styled like Contact Info section */}
+                <div className="mt-8">
+                  <h3 className="text-base font-semibold text-gray-800 mb-3 flex items-center gap-2">
+                    <User className="w-5 h-5 text-blue-500" /> Medical Information
+                  </h3>
+                  <ul className="space-y-2 text-sm text-gray-700">
+
+                    <li className="flex items-center gap-2">
+                      <User className="w-4 h-4 text-gray-500" />
+                      <span className="font-medium">Medical Aid:</span> {profile.medicalAid ? 'Yes' : 'No'}
+                    </li>
+                    <li className="flex items-center gap-2">
+                      <User className="w-4 h-4 text-gray-500" />
+                      <span className="font-medium">Medical Aid Name:</span> {profile.medicalAidName || <span className="text-gray-400">-</span>}
+                    </li>
+                  </ul>
                 </div>
-                <div>
-                  <label className="block text-sm font-medium">City</label>
-                  <input
-                    className="border rounded px-3 py-2 w-full"
-                    name="city"
-                    value={form.city || ""}
-                    onChange={handleChange}
-                  />
-                </div>
-                <div className="flex gap-3">
-                  <button
-                    type="submit"
-                    className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg shadow"
-                  >
-                    Save
-                  </button>
-                  <button
-                    type="button"
-                    className="bg-gray-400 hover:bg-gray-500 text-white px-4 py-2 rounded-lg shadow"
-                    onClick={() => setEditMode(false)}
-                  >
-                    Cancel
-                  </button>
-                </div>
-              </form>
-            )}
+              </div>
+            </div>
+
           </div>
-          
-         
-        </div> <div className="max-w-9xl gap-4 text-sm">
-             <VolunteerWorkOrder/>
-           </div>
+          {/* Volunteer Work Order Section */}
+      <VolunteerWorkOrder />
+        </div>
       </div>
-    </div>
+    </>
   );
 };
 

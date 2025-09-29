@@ -14,7 +14,7 @@ export const Dashboard = () => {
       {/* Navigation */}
       <nav className="p-4 space-y-1 text-sm">
         <NavLink
-          to="/"
+          to="/dashboard/statics"
           className={({ isActive }) =>
             `flex items-center gap-3 px-3 py-2 rounded ${isActive ? "bg-white/10" : "hover:bg-white/10"
             }`
@@ -54,14 +54,20 @@ export const Dashboard = () => {
       {/* Bottom actions */}
       <div className="mt-auto p-4 space-y-2">
         <Button className="w-full bg-white text-[#1b0f29] hover:bg-white/90">
-          <Plus className="w-4 h-4 mr-2" />
+           <NavLink to="/dashboard/members"
+          className="flex items-center gap-3 px-3 py-2 rounded hover:bg-white/10" />
           Create Task
         </Button>
         <Button
-          variant="outline"
+         
           className="w-full border-white/30 text-white hover:bg-white/10"
+          onClick={() => {
+            // Remove user session and redirect to login
+            localStorage.clear();
+            window.location.href = "/login";
+          }}
         >
-          Invite Member
+          Logout
         </Button>
       </div>
     </aside>

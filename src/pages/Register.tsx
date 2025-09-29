@@ -7,6 +7,11 @@ import { createUserWithEmailAndPassword, updateProfile } from 'firebase/auth';
 import { auth, db } from '@/lib/firebase';
 import { useToast } from '@/hooks/use-toast';
 import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
+import { Mail, Lock, User, Building2, Calendar, IdCard, Contact, MapPin, Home, Landmark, Phone, HeartPulse } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
+import { Checkbox } from '@/components/ui/checkbox';
+import SignaturePad from "@/components/SignaturePad";
+
 
 const Register = () => {
   const [email, setEmail] = useState('');
@@ -24,6 +29,11 @@ const Register = () => {
   const [medicalAid, setMedicalAid] = useState<'yes' | 'no'>('no');
   const [medicalAidName, setMedicalAidName] = useState('');
   const [loading, setLoading] = useState(false);
+  const [showTerms, setShowTerms] = useState(false);
+  const [termsAccepted, setTermsAccepted] = useState(false);
+  const [volunteerSignature, setVolunteerSignature] = useState('');
+  const [dateCreated, setDateCreated] = useState('');
+  const [showSignaturePad, setShowSignaturePad] = useState(false);
 
   const { toast } = useToast();
   const navigate = useNavigate();
@@ -53,6 +63,8 @@ const Register = () => {
         city,
         medicalAid: medicalAid === 'yes',
         medicalAidName: medicalAid === 'yes' ? medicalAidName : '',
+        volunteerSignature,
+        dateCreated: dateCreated || new Date().toISOString(),
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
       });
@@ -67,6 +79,18 @@ const Register = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleShowTerms = (e: React.FormEvent) => {
+    e.preventDefault();
+    setShowTerms(true);
+  };
+
+
+  const handleAcceptTerms = async () => {
+    setShowTerms(false);
+    setTermsAccepted(false);
+    setShowSignaturePad(true);
   };
 
   // South African provinces and cities
@@ -90,7 +114,7 @@ const Register = () => {
       {/* Left side - form */}
       <div className="flex-1 flex flex-col items-center justify-center px-8 md:px-16">
         {/* Logo */}
-       <div className="mb-6 text-center">
+        <div className="mb-6 text-center">
           <h1 className="text-5xl font-bold text-gray-800">
             Welcome To Our Platform
           </h1>
@@ -98,20 +122,23 @@ const Register = () => {
 
 
         {/* Card */}
-        <Card className="w-full max-w-2xl bg-white shadow-xl rounded-2xl border border-gray-200">
+
+        <Card className="w-full max-w-5xl bg-white shadow-2xl rounded-2xl border border-gray-200">
           <CardHeader>
-            <CardTitle className="text-center text-2xl font-bold text-gray-800">
+            <CardTitle className="text-center text-3xl font-extrabold text-indigo-700">
               Create Your Account ✨
             </CardTitle>
-            <p className="text-center text-sm text-gray-500 mt-1">
+            <p className="text-center text-sm text-gray-500 mt-2">
               Fill in your details to get started
             </p>
           </CardHeader>
           <CardContent>
-            <form onSubmit={handleSubmit} className="space-y-5">
-              {/* Name */}
+            <form onSubmit={handleShowTerms} className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* Full Name */}
               <div className="space-y-2">
-                <label className="text-sm font-medium text-gray-700">Full Name</label>
+                <label className="flex items-center gap-2 text-sm font-medium text-gray-700">
+                  <User size={16} /> Full Name
+                </label>
                 <Input
                   placeholder="John Doe"
                   value={displayName}
@@ -121,7 +148,9 @@ const Register = () => {
 
               {/* Email */}
               <div className="space-y-2">
-                <label className="text-sm font-medium text-gray-700">Email Address</label>
+                <label className="flex items-center gap-2 text-sm font-medium text-gray-700">
+                  <Mail size={16} /> Email Address
+                </label>
                 <Input
                   type="email"
                   placeholder="you@example.com"
@@ -133,7 +162,9 @@ const Register = () => {
 
               {/* Password */}
               <div className="space-y-2">
-                <label className="text-sm font-medium text-gray-700">Password</label>
+                <label className="flex items-center gap-2 text-sm font-medium text-gray-700">
+                  <Lock size={16} /> Password
+                </label>
                 <Input
                   type="password"
                   placeholder="********"
@@ -143,48 +174,56 @@ const Register = () => {
                 />
               </div>
 
-              {/* Grid fields */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                <div className="space-y-2">
-                  <label className="text-sm font-medium text-gray-700">Department</label>
-                  <Input
-                    placeholder="Department"
-                    value={department}
-                    onChange={(e) => setDepartment(e.target.value)}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <label className="text-sm font-medium text-gray-700">Date</label>
-                  <Input
-                    type="date"
-                    value={date}
-                    onChange={(e) => setDate(e.target.value)}
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                <div className="space-y-2">
-                  <label className="text-sm font-medium text-gray-700">ID Number</label>
-                  <Input
-                    value={idNumber}
-                    onChange={(e) => setIdNumber(e.target.value)}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <label className="text-sm font-medium text-gray-700">
-                    Student/Staff Number
-                  </label>
-                  <Input
-                    value={studentOrStaffNumber}
-                    onChange={(e) => setStudentOrStaffNumber(e.target.value)}
-                  />
-                </div>
-              </div>
-
+              {/* Department */}
               <div className="space-y-2">
-                <label className="text-sm font-medium text-gray-700">
-                  Emergency Contact Name
+                <label className="flex items-center gap-2 text-sm font-medium text-gray-700">
+                  <Building2 size={16} /> Department
+                </label>
+                <Input
+                  placeholder="Department"
+                  value={department}
+                  onChange={(e) => setDepartment(e.target.value)}
+                />
+              </div>
+
+              {/* Date */}
+              <div className="space-y-2">
+                <label className="flex items-center gap-2 text-sm font-medium text-gray-700">
+                  <Calendar size={16} /> Date
+                </label>
+                <Input
+                  type="date"
+                  value={date}
+                  onChange={(e) => setDate(e.target.value)}
+                />
+              </div>
+
+              {/* ID Number */}
+              <div className="space-y-2">
+                <label className="flex items-center gap-2 text-sm font-medium text-gray-700">
+                  <IdCard size={16} /> ID Number
+                </label>
+                <Input
+                  value={idNumber}
+                  onChange={(e) => setIdNumber(e.target.value)}
+                />
+              </div>
+
+              {/* Student/Staff Number */}
+              <div className="space-y-2">
+                <label className="flex items-center gap-2 text-sm font-medium text-gray-700">
+                  <Landmark size={16} /> Student/Staff Number
+                </label>
+                <Input
+                  value={studentOrStaffNumber}
+                  onChange={(e) => setStudentOrStaffNumber(e.target.value)}
+                />
+              </div>
+
+              {/* Emergency Contact */}
+              <div className="space-y-2 col-span-2">
+                <label className="flex items-center gap-2 text-sm font-medium text-gray-700">
+                  <Contact size={16} /> Emergency Contact Name
                 </label>
                 <Input
                   value={emergencyContactName}
@@ -192,9 +231,10 @@ const Register = () => {
                 />
               </div>
 
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-gray-700">
-                  Physical Address Line 1
+              {/* Address Line 1 */}
+              <div className="space-y-2 col-span-2">
+                <label className="flex items-center gap-2 text-sm font-medium text-gray-700">
+                  <Home size={16} /> Physical Address Line 1
                 </label>
                 <Input
                   value={physicalAddressLine1}
@@ -202,9 +242,10 @@ const Register = () => {
                 />
               </div>
 
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-gray-700">
-                  Physical Address Line 2
+              {/* Address Line 2 */}
+              <div className="space-y-2 col-span-2">
+                <label className="flex items-center gap-2 text-sm font-medium text-gray-700">
+                  <Home size={16} /> Physical Address Line 2
                 </label>
                 <Input
                   value={physicalAddressLine2}
@@ -212,76 +253,121 @@ const Register = () => {
                 />
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                <div className="space-y-2">
-                  <label className="text-sm font-medium text-gray-700">Province</label>
-                  <select
-                    className="h-10 rounded-md border border-gray-300 px-3 text-sm focus:border-indigo-500 focus:ring-indigo-500"
-                    value={province}
-                    onChange={e => {
-                      setProvince(e.target.value);
-                      setCity(""); // Reset city when province changes
-                    }}
-                    required
-                  >
-                    <option value="">Select Province</option>
-                    {provinces.map((prov) => (
-                      <option key={prov} value={prov}>{prov}</option>
-                    ))}
-                  </select>
-                </div>
-                <div className="space-y-2">
-                  <label className="text-sm font-medium text-gray-700">City</label>
-                  <select
-                    className="h-10 rounded-md border border-gray-300 px-3 text-sm focus:border-indigo-500 focus:ring-indigo-500"
-                    value={city}
-                    onChange={e => setCity(e.target.value)}
-                    required
-                    disabled={!province}
-                  >
-                    <option value="">Select City</option>
-                    {province && citiesByProvince[province]?.map((c) => (
-                      <option key={c} value={c}>{c}</option>
-                    ))}
-                  </select>
-                </div>
+              {/* Province */}
+              <div className="space-y-2">
+                <label className="flex items-center gap-2 text-sm font-medium text-gray-700">
+                  <MapPin size={16} /> Province
+                </label>
+                <select
+                  className="h-10 w-full rounded-md border border-gray-300 px-3 text-sm focus:border-indigo-500 focus:ring-indigo-500"
+                  value={province}
+                  onChange={e => {
+                    setProvince(e.target.value);
+                    setCity(""); // Reset city when province changes
+                  }}
+                  required
+                >
+                  <option value="">Select Province</option>
+                  {provinces.map((prov) => (
+                    <option key={prov} value={prov}>{prov}</option>
+                  ))}
+                </select>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                <div className="space-y-2">
-                  <label className="text-sm font-medium text-gray-700">Medical Aid</label>
-                  <select
-                    className="h-10 rounded-md border border-gray-300 px-3 text-sm focus:border-indigo-500 focus:ring-indigo-500"
-                    value={medicalAid}
-                    onChange={(e) => setMedicalAid(e.target.value as 'yes' | 'no')}
-                  >
-                    <option value="no">No</option>
-                    <option value="yes">Yes</option>
-                  </select>
-                </div>
-
-                {medicalAid === 'yes' && (
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium text-gray-700">
-                      Medical Aid Name
-                    </label>
-                    <Input
-                      value={medicalAidName}
-                      onChange={(e) => setMedicalAidName(e.target.value)}
-                    />
-                  </div>
-                )}
+              {/* City */}
+              <div className="space-y-2">
+                <label className="flex items-center gap-2 text-sm font-medium text-gray-700">
+                  <Building2 size={16} /> City
+                </label>
+                <select
+                  className="h-10 w-full rounded-md border border-gray-300 px-3 text-sm focus:border-indigo-500 focus:ring-indigo-500"
+                  value={city}
+                  onChange={e => setCity(e.target.value)}
+                  required
+                  disabled={!province}
+                >
+                  <option value="">Select City</option>
+                  {province && citiesByProvince[province]?.map((c) => (
+                    <option key={c} value={c}>{c}</option>
+                  ))}
+                </select>
               </div>
+
+              {/* Medical Aid */}
+              <div className="space-y-2">
+                <label className="flex items-center gap-2 text-sm font-medium text-gray-700">
+                  <HeartPulse size={16} /> Medical Aid
+                </label>
+                <select
+                  className="h-10 w-full rounded-md border border-gray-300 px-3 text-sm focus:border-indigo-500 focus:ring-indigo-500"
+                  value={medicalAid}
+                  onChange={(e) => setMedicalAid(e.target.value as 'yes' | 'no')}
+                >
+                  <option value="no">No</option>
+                  <option value="yes">Yes</option>
+                </select>
+              </div>
+
+              {/* Medical Aid Name (only if yes) */}
+              {medicalAid === 'yes' && (
+                <div className="space-y-2">
+                  <label className="flex items-center gap-2 text-sm font-medium text-gray-700">
+                    <HeartPulse size={16} /> Medical Aid Name
+                  </label>
+                  <Input
+                    value={medicalAidName}
+                    onChange={(e) => setMedicalAidName(e.target.value)}
+                  />
+                </div>
+              )}
+
+           
 
               {/* Submit */}
-              <Button
-                type="submit"
-                className="w-full bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg py-2 font-medium transition-all duration-200"
-                disabled={loading}
-              >
-                {loading ? 'Creating...' : 'Create Account'}
-              </Button>
+              <div className="col-span-2">
+                <Button
+                  type="submit"
+                  className="w-full bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg py-3 font-semibold shadow-md transition-all duration-200"
+                  disabled={loading}
+                >
+                  {loading ? 'Creating...' : 'Create Account'}
+                </Button>
+              </div>
             </form>
+
+            {/* Signature Pad Dialog */}
+            <Dialog open={showSignaturePad} onOpenChange={setShowSignaturePad}>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Volunteer Signature (Draw below or type)</DialogTitle>
+                </DialogHeader>
+                <div className="space-y-2">
+                  <SignaturePad value={volunteerSignature} onChange={setVolunteerSignature} />
+                  <Input
+                    className="mt-2"
+                    placeholder="Type your full name as signature (optional)"
+                    value={volunteerSignature}
+                    onChange={e => setVolunteerSignature(e.target.value)}
+                  />
+                </div>
+                <DialogFooter>
+                  <Button
+                    onClick={async () => {
+                      setShowSignaturePad(false);
+                      // Create a fake event to pass to handleSubmit
+                      const fakeEvent = { preventDefault: () => { } } as React.FormEvent;
+                      await handleSubmit(fakeEvent);
+                    }}
+                    disabled={!volunteerSignature}
+                  >
+                    Continue
+                  </Button>
+                  <Button variant="outline" onClick={() => setShowSignaturePad(false)}>
+                    Cancel
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
 
             {/* Divider */}
             <div className="flex items-center my-6">
@@ -302,6 +388,7 @@ const Register = () => {
             </p>
           </CardContent>
         </Card>
+
       </div>
 
       {/* Right side - image */}
@@ -312,6 +399,85 @@ const Register = () => {
           className="rounded-2xl shadow-lg max-h-[500px] object-cover"
         />
       </div>
+
+      {/* Terms and Conditions Dialog */}
+      <Dialog open={showTerms} onOpenChange={setShowTerms}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Durban University of Technology (DUT) — Terms & Conditions 📜</DialogTitle>
+            <DialogDescription>
+              Please read carefully before continuing.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="max-h-80 overflow-y-auto text-sm text-gray-700 space-y-5 leading-relaxed">
+            <p>
+              The Durban University of Technology (DUT) welcomes you as an authorized Faculty volunteer in this activity.
+              Please read through the following important information.
+            </p>
+
+            <h4 className="font-semibold">1. Compensation & Employment Status</h4>
+            <p>
+              The Compensation for Occupational Injuries and Diseases Act (COIDA) provides that a person has to be paid in cash
+              or in-kind; and payment in kind means the provision of something that has an objectively ascertainable value
+              to be considered an employee. Therefore, as a volunteer, you are <b>not an employee or agent of DUT</b> for workers’
+              compensation purposes. You are not entitled to receive workers’ compensation benefits or any other benefits of
+              employment from DUT, including, but not limited to, health care, vacation, or sick time.
+            </p>
+            <p>
+              In the event of an injury requiring medical care, you or your medical healthcare insurance will be responsible
+              for payment of all medical care.
+            </p>
+
+            <h4 className="font-semibold">2. Use of Private Vehicles</h4>
+            <p>
+              Use of a privately owned vehicle, including the operation or as a passenger, may be an option while participating
+              in the volunteer activity. DUT does not provide liability or physical damage insurance coverage on privately
+              owned vehicles. The vehicle owner must provide liability and physical damage insurance coverage for the privately
+              owned vehicle.
+            </p>
+
+            <h4 className="font-semibold">3. Assumption of Risks</h4>
+            <p>I exercise my own free choice to participate in the designated activity. I understand and assume all associated risks. These risks include, but are not limited to:</p>
+            <ul className="list-disc pl-5 space-y-1">
+              <li><b>Privacy Risks:</b> Image, Voice, Video, and Name will be publicly accessible.</li>
+              <li><b>Lack of Compensation / Benefits:</b> You will not be entitled to any financial compensation.</li>
+              <li><b>Time and Effort:</b> Once committed to a shoot, all care will be taken to meet your responsibilities.</li>
+              <li>
+                <b>Personal Injury or Loss:</b> You agree to assume all risk of personal injury or loss, bodily injury
+                (including death), damage to or loss of, or destruction of personal property, resulting from or arising
+                out of participation in the designated volunteer activity.
+              </li>
+            </ul>
+
+            <h4 className="font-semibold">4. Age Requirement</h4>
+            <p>No volunteers under 18 years of age are allowed to volunteer at DUT.</p>
+
+            <h4 className="font-semibold">5. Emergency Medical Authorization</h4>
+            <p>
+              In the event of an emergency, I grant DUT permission to authorize emergency medical care and treatment for
+              the Volunteer for the duration of his/her participation in this designated activity.
+            </p>
+
+            <p className="font-semibold text-indigo-700">
+              ✅ By clicking "Accept & Continue", you acknowledge that you have read, understood,
+              and agree to these Terms & Conditions.
+            </p>
+          </div>
+          <div className="flex items-center mb-4">
+            <Checkbox id="accept-terms" checked={termsAccepted} onCheckedChange={val => setTermsAccepted(val === true)} />
+            <label htmlFor="accept-terms" className="ml-2 text-sm text-gray-700">I accept the terms and conditions</label>
+          </div>
+          <DialogFooter>
+            <Button onClick={handleAcceptTerms} disabled={!termsAccepted}>
+              Accept & Continue
+            </Button>
+            <Button variant="outline" onClick={() => setShowTerms(false)}>
+              Cancel
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

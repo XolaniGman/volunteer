@@ -19,6 +19,7 @@ import Profile from "./components/Profile";
 import { useAuth } from "@/Contexts/AuthContext";
 import VolunteerWorkOrder from "./pages/VolunteerWorkOrder";
 import Proof from "./pages/Proof";
+import Statics from "./pages/statics";
 
 const queryClient = new QueryClient();
 
@@ -64,13 +65,13 @@ const App = () => {
             </ProtectedRoute>} />
             {/* Dashboard routes */}
             <Route path="dashboard" element={<DashboardLayout />}>
-              <Route index element={<div>Welcome to Dashboard</div>} />
+              <Route path="statics" element={<Statics />} />
               <Route path="members" element={<MembersTable />} />
               <Route path="tasks" element={<WorkItemsTable />} />
-
               <Route path="calendar" element={<div>Calendar Page</div>} />
               <Route path="volunteer" element={<VolunteerWorkOrder />} />
             </Route>
+            
             {/* Catch-all */}
             <Route path="*" element={<NotFound />} />
           </Routes>
