@@ -5,6 +5,7 @@ import { doc, getDoc, setDoc, updateDoc, deleteDoc } from "firebase/firestore";
 import { getDownloadURL, ref, uploadBytes } from "firebase/storage";
 
 import { Mail, Phone, MapPin, Calendar, User } from "lucide-react";
+import { motion } from "framer-motion";
 import { DashboardHeader } from "./Dashboard/DashboardHeader";
 import { WorkItemFilter } from "@/types/workItem";
 import VolunteerWorkOrder from "../pages/VolunteerWorkOrder";
@@ -43,6 +44,7 @@ const Profile = () => {
   const [error, setError] = useState<string | null>(null);
   const [filter, setFilter] = useState<WorkItemFilter>(defaultFilter);
   const [uploading, setUploading] = useState(false);
+  const [selectedAcademicRow, setSelectedAcademicRow] = useState<number | null>(null);
 
   const auth = getAuth();
   const user = auth.currentUser;
@@ -133,7 +135,7 @@ const Profile = () => {
   return (
     <>
       
-      <div className="min-h-screen bg-gray-100">
+      <div className="min-h-screen bg-gradient-to-br from-indigo-950 via-purple-900 to-indigo-900">
         {/* Dashboard Header */}
         <DashboardHeader
           filter={filter}
@@ -141,11 +143,11 @@ const Profile = () => {
           onNewWorkItem={() => { }}
         />
 
-        <div className="min-h-screen bg-blue-100 flex  justify-center py-10">
-          <div className="w-full max-w-7xl bg-white rounded-xl shadow-lg overflow-hidden">
+        <div className="min-h-screen flex  justify-center py-10 px-4">
+          <div className="w-full max-w-7xl bg-white/10 backdrop-blur-lg border border-white/20 rounded-2xl shadow-elevated overflow-hidden">
             <div className="flex">
               {/* Left Sidebar */}
-              <div className="w-1/3 border-r p-6 bg-gray-50">
+              <div className="w-1/3 border-r border-white/10 p-6 bg-white/5">
                 {/* Avatar */}
                 <div className="h-36 w-36 rounded-lg overflow-hidden mx-auto shadow-md relative group">
                   <img
@@ -169,39 +171,27 @@ const Profile = () => {
 
                 {/* Work Section */}
                 <div className="mt-6">
-                  <h3 className="text-sm font-semibold text-gray-700 uppercase tracking-wide mb-2">
+                  <h3 className="text-sm font-semibold text-indigo-200 uppercase tracking-wide mb-2">
                    Academic Information
                   </h3>
-                  <ul className="space-y-2 text-sm text-gray-600">
-                    <li className="space-y-2 p-2 border-b font-medium">
-
-                      {profile.department || <span className="text-gray-400 ">-</span>}
-
-                      <span className="ml-2 text-xs text-white bg-blue-500 rounded px-2 py-0.5">
-                        Deparment
-                      </span>
-                      <p className="text-xs text-blue-900">
-                        faculty of Accounting and Informatics
-                      </p>
-                    </li>
-                    <li className="space-y-2 p-2 border-b font-medium">
-                      {profile.studentOrStaffNumber || <span className="text-gray-400">-</span>}
-                      <span className="ml-2 text-xs text-white bg-indigo-500 rounded px-2 py-0.5">
-                        Student / Staff Number
-                      </span>
-                      <p className="text-xs text-blue-900">
-                        Durban University Of Technology
-                      </p>
-                    </li>
-                    <li className="space-y-2 p-2 border-b font-medium">
-                      {profile.idNumber || <span className="text-gray-400">-</span>}
-                      <span className="ml-2 text-xs text-white bg-indigo-500 rounded px-2 py-0.5">
-                        ID Number
-                      </span>
-                      <p className="text-xs text-blue-900">
-                        South Africa
-                      </p>
-                    </li>
+                  <ul className="space-y-2 text-sm text-indigo-100/90">
+                    {[{
+                      label: 'Department', value: profile.department, sub: 'Faculty of Accounting and Informatics'
+                    }, { label: 'Student / Staff Number', value: profile.studentOrStaffNumber, sub: 'Durban University Of Technology'
+                    }, { label: 'ID Number', value: profile.idNumber, sub: 'South Africa' }].map((row, idx) => (
+                      <motion.li
+                        key={row.label}
+                        initial={{ opacity: 0, y: 8 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.35, delay: idx * 0.05 }}
+                        onClick={() => setSelectedAcademicRow(idx)}
+                        className={`space-y-2 p-3 border-b border-white/10 font-medium rounded-md cursor-pointer transition-all ${selectedAcademicRow === idx ? 'bg-gradient-to-r from-indigo-500/15 to-purple-500/15 border-l-4 border-l-indigo-400 shadow-[0_0_0_1px_rgba(99,102,241,0.25)]' : 'hover:bg-white/5'}`}
+                      >
+                        {row.value || <span className="text-indigo-200/60">-</span>}
+                        <span className="ml-2 text-[10px] tracking-wide text-white/90 bg-gradient-to-r from-indigo-600 to-purple-600 rounded px-2 py-0.5">{row.label}</span>
+                        <p className="text-xs text-indigo-200/80">{row.sub}</p>
+                      </motion.li>
+                    ))}
                   </ul>
                 </div>
 
@@ -335,10 +325,7 @@ const Profile = () => {
                       </>
                     )}
                   </div>
-                  <div className="text-right">
-                    <p className="text-gray-600 text-sm">Earnings</p>
-                    <p className="text-lg font-semibold text-gray-800">8,6 ⭐⭐⭐⭐☆</p>
-                  </div>
+                  
                 </div>
 
                 {/* Action Buttons */}
