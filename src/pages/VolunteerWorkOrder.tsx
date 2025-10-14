@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 
 // Declare html2pdf on window for TypeScript
 declare global {
@@ -31,6 +32,7 @@ interface Profile {
 const VolunteerWaiver: React.FC = () => {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
+  const navigate = useNavigate();
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -72,32 +74,37 @@ const VolunteerWaiver: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-white-100 p-8 font-sans space-y-12">
-      <button
-        onClick={handleDownloadPDF}
-        className="mb-4 px-4 py-2 bg-blue-600 text-white rounded shadow hover:bg-blue-700"
-      >
-        Download PDF
-      </button>
+    <div className="min-h-screen max-w-7xl mx-auto border-2 border-gray-300 rounded-lg bg-white-100 p-8 font-sans space-y-12">
+      <div className="mb-4 flex items-center gap-3">
+        <button
+          onClick={() => navigate('/profile')}
+          className="px-4 py-2 bg-gray-200 text-gray-800 rounded shadow hover:bg-gray-300"
+        >
+          ← Back to Profile
+        </button>
+        <button
+          onClick={handleDownloadPDF}
+          className="px-4 py-2 bg-blue-600 text-white rounded shadow hover:bg-blue-700"
+        >
+          Download PDF
+        </button>
+      </div>
       <div id="volunteer-workorder-pdf">
         {/* ---------------- Page 1 ---------------- */}
         <div className="bg-white w-full max-w-5xl mx-auto shadow-lg border">
-          <div className="relative bg-purple-200 p-6">
-            <div className="absolute top-0 left-0 p-3">
+          <div className="relative max-w-5xl bg-purple-200 p-6 flex justify-center items-center">
               <img
-                src="/asserts/DUTENVLOGO1.jpg"
+                src="/asserts/DUTENVLOGO1.png"
                 alt="DUT Logo"
-                width="100"
-                height="100"
+                width="220"
+                height="220"
+                className="mx-auto"
               />
-            </div>
-            <div className="relative z-10 text-center">
-              <h1 className="text-lg font-bold text-gray-800">
-                Volunteer Notice of Risk and Waiver
-              </h1>
-            </div>
           </div>
           <div className="p-6 text-sm leading-relaxed space-y-4">
+            <h1 className="text-sm font-bold text-gray-800">
+                Volunteer Notice of Risk and Waiver
+              </h1>
             <div className="grid grid-cols-2 border mb-4">
               <div className="p-2 font-semibold border">Volunteer Name</div>
               <div className="p-2 border">{profile.displayName || "-"}</div>
@@ -150,6 +157,8 @@ const VolunteerWaiver: React.FC = () => {
             
           </div>
         </div>
+        {/* PAGE BREAK */}
+        <div className="page-break p-2"></div>
         {/* ---------------- Page 2 ---------------- */}
         <div className="bg-white w-full p-6 max-w-5xl mx-auto shadow-lg border">
           {/* Header with logo */}
@@ -186,21 +195,33 @@ const VolunteerWaiver: React.FC = () => {
               activity. I understand and assume all associated risks. These risks
               include, but are not limited to:
             </p>
-            <ul className="list-disc pl-6 space-y-1">
-              <li>
+            <ul className="list-disc border-l-6  border border-red-500 space-y-1">
+                 <p >
+                <span className="font-semibold">Health Risks:</span> Infectious 
+                diseases, Poor sanitation and hygiene, mental health strain, etc
+              </p>
+                 <p>
+                <span className="font-semibold">Safety & Security Risks:</span> Crime, 
+                Political instability, natural disaster, etc.
+              </p>
+                 <p>
+                <span className="font-semibold">Travel & Transportation:</span> Accidents, 
+                Weather Delays, poor roads and transport system
+              </p>
+              <p>
                 <span className="font-semibold">Privacy Risks:</span> Image,
                 Voice, Video, Name will be publicly accessible...
-              </li>
-              <li>
+              </p>
+              <p>
                 <span className="font-semibold">
                   Lack of Compensation / Benefits:
                 </span>{" "}
                 You will not be entitled to any financial compensation...
-              </li>
-              <li>
+              </p>
+              <p>
                 <span className="font-semibold">Time and Effort:</span> Once
                 committed to a shoot, all care will be taken...
-              </li>
+              </p>
             </ul>
             <p>
               I agree to assume all risk of personal injury or loss, bodily injury

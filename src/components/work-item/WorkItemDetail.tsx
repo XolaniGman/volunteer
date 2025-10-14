@@ -1,57 +1,55 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { format } from 'date-fns';
-import { doc, deleteDoc, updateDoc } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
-
+import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { WorkItem, WorkItemState, WorkItemPriority } from '@/types/workItem';
-import { WorkItemIcon } from './WorkItemIcon';
-import { ArrowLeft, Save, MessageSquare,  Trash2 } from 'lucide-react';
-import { cn } from '@/lib/utils';
-import { useAuth } from '@/Contexts/AuthContext';
 import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
-import { Calendar as CalendarIcon, Link, Star } from 'lucide-react';
+import { WorkItem, WorkItemState, WorkItemPriority } from '@/types/workItem';
+import { WorkItemIcon } from './WorkItemIcon';
+import {
+  ArrowLeft,
+  Save,
+  Trash2,
+  Calendar as CalendarIcon,
+  Link,
+  Star,
+  FileText,
+  AlignLeft,
+  Map,
+} from 'lucide-react';
+import { cn } from '@/lib/utils';
+import { useAuth } from '@/Contexts/AuthContext';
 
-interface WorkItemDetail {
+interface WorkItemDetailProps {
   workItem: WorkItem;
   onBack: () => void;
   onSave: (workItem: WorkItem) => void;
   onDelete?: (id: string) => void;
-  onNext?: () => void;
 }
 
-export const WorkItemDetail: React.FC<WorkItemDetail> = ({ workItem, onBack, onSave, onDelete, onNext }) => {
+export const WorkItemDetail: React.FC<WorkItemDetailProps> = ({
+  workItem,
+  onBack,
+  onSave,
+  onDelete,
+}) => {
   const [editedItem, setEditedItem] = useState<WorkItem>(workItem);
-  const [newComment, setNewComment] = useState('');
   const { user } = useAuth();
-  const [skills, setSkills] = useState<string[]>([]);
-  const [experience, setExperience] = useState('');
-  const [summary, setSummary] = useState('');
-  const [aiLoading, setAiLoading] = useState(false);
-  const [aiError, setAiError] = useState('');
-
-  // Add missing state for requestedDate, url, dateCompleted
-  // Use activityDate for requestedDate, createdDate for dateCompleted
   const [requestedDate, setRequestedDate] = useState<Date | undefined>(
     workItem.activityDate ? new Date(workItem.activityDate) : undefined
   );
-  // No url field in WorkItem, so just use a local state for demonstration
-  const [url, setUrl] = useState<string>('');
   const [dateCompleted, setDateCompleted] = useState<Date | undefined>(
     workItem.createdDate ? new Date(workItem.createdDate) : undefined
   );
+  const [url, setUrl] = useState('');
 
   const handleSave = () => onSave(editedItem);
-
   const handleDelete = () => {
     if (!onDelete) return;
     if (window.confirm('Are you sure you want to delete this work item?')) {
@@ -59,138 +57,160 @@ export const WorkItemDetail: React.FC<WorkItemDetail> = ({ workItem, onBack, onS
     }
   };
 
-  const handleAddComment = () => {
-    if (!newComment.trim()) return;
-
-    const comment = {
-      id: Date.now().toString(),
-      author: user?.displayName || user?.email || 'Anonymous',
-      content: newComment,
-      createdAt: new Date().toISOString(),
-    };
-
-    setEditedItem({
-      ...editedItem,
-      comments: [...editedItem.comments, comment],
-    });
-    setNewComment('');
-  };
-
-  const renderStarRating = (priority: WorkItemPriority) => {
-    return (
-      <div className="flex gap-1">
-        {[1, 2, 3, 4, 5].map((star) => (
-          <Star
-            key={star}
-            className={cn(
-              "w-6 h-6 cursor-pointer transition-colors",
-              star <= (6 - priority) ? "fill-yellow-400 text-yellow-400" : "text-gray-300"
-            )}
-            onClick={() => setEditedItem({ ...editedItem, priority: (6 - star) as WorkItemPriority })}
-          />
-        ))}
-      </div>
-    );
-  };
-
-  function handleNext(event: React.MouseEvent<HTMLButtonElement, MouseEvent>): void {
-    event.preventDefault();
-    if (onNext) {
-      onNext();
-    }
-  }
+  const renderStarRating = (priority: WorkItemPriority) => (
+    <motion.div
+      className="flex gap-1"
+      initial={{ opacity: 0, y: 5 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: 0.2 }}
+    >
+      {[1, 2, 3, 4, 5].map((star) => (
+        <Star
+          key={star}
+          className={cn(
+            'w-6 h-6 cursor-pointer transition-colors duration-200',
+            star <= (6 - priority)
+              ? 'fill-yellow-400 text-yellow-400'
+              : 'text-gray-300 hover:text-yellow-400'
+          )}
+          onClick={() =>
+            setEditedItem({ ...editedItem, priority: (6 - star) as WorkItemPriority })
+          }
+        />
+      ))}
+    </motion.div>
+  );
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50">
-      <div className="max-w-4xl mx-auto p-6">
-        
+    <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-purple-50 to-white">
+      <motion.div
+        className="max-w-5xl mx-auto p-6"
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.4 }}
+      >
         {/* Header */}
-        <div className="flex items-center gap-4 p-4 rounded-xl bg-white border border-gray-200 shadow-lg mb-6">
-          <Button variant="ghost" onClick={onBack} size="sm" className="text-gray-600 hover:text-gray-900">
+        <motion.div
+          className="flex items-center gap-4 p-4 rounded-xl bg-white border border-gray-200 shadow-md mb-6"
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.1 }}
+        >
+          <Button
+            variant="ghost"
+            onClick={onBack}
+            size="sm"
+            className="text-gray-600 hover:text-indigo-600 transition-colors"
+          >
             <ArrowLeft className="w-4 h-4 mr-2" />
             Back
           </Button>
+
           <div className="flex items-center gap-2 text-gray-600">
-            <WorkItemIcon type={editedItem.type} className="w-5 h-5" />
-            <span className="uppercase tracking-wide text-xs">{editedItem.type}</span>
+            <WorkItemIcon type={editedItem.type} className="w-5 h-5 text-indigo-600" />
+            <span className="uppercase tracking-wide text-xs font-medium">
+              {editedItem.type}
+            </span>
           </div>
+
           <div className="ml-auto flex gap-2">
-            <Button onClick={handleSave} className="bg-blue-600 hover:bg-blue-700">
+            <Button
+              onClick={handleSave}
+              className="bg-indigo-600 hover:bg-indigo-700 transition-all text-white"
+            >
               <Save className="w-4 h-4 mr-2" /> Save
             </Button>
             {onDelete && (
-              <Button variant="destructive" onClick={handleDelete}>
+              <Button
+                variant="destructive"
+                onClick={handleDelete}
+                className="hover:bg-red-700 transition-all"
+              >
                 <Trash2 className="w-4 h-4 mr-2" /> Delete
               </Button>
             )}
           </div>
-        </div>
+        </motion.div>
 
-        {/* Form */}
-        <div className="bg-white rounded-lg border border-gray-200 p-6 space-y-6 shadow-sm">
-          <h1 className="text-2xl font-semibold text-gray-900 mb-6">Volunteer Activity Details Form</h1>
+        {/* Content */}
+        <motion.div
+          className="bg-white rounded-2xl border border-gray-200 p-8 space-y-6 shadow-lg hover:shadow-xl"
+          initial={{ opacity: 0, scale: 0.98 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 0.3 }}
+        >
+          <h1 className="text-3xl font-bold text-indigo-700 flex items-center gap-2">
+            <FileText className="w-6 h-6 text-indigo-600" /> Volunteer Activity Details
+          </h1>
 
           {/* Title */}
           <div className="space-y-2">
-            <Label htmlFor="title" className="text-sm font-medium text-gray-700">Volunteer Activity Title</Label>
+            <Label className="flex items-center gap-2 text-gray-700">
+              <FileText className="w-4 h-4 text-indigo-500" /> Activity Title
+            </Label>
             <Input
-              id="title"
               value={editedItem.title}
               onChange={(e) => setEditedItem({ ...editedItem, title: e.target.value })}
               placeholder="Enter work item title"
+              className="transition-all focus:ring-2 focus:ring-indigo-400"
             />
           </div>
 
           {/* Description */}
           <div className="space-y-2">
-            <Label htmlFor="description" className="text-sm font-medium text-gray-700">Volunteer Activity Description</Label>
+            <Label className="flex items-center gap-2 text-gray-700">
+              <AlignLeft className="w-4 h-4 text-indigo-500" /> Description
+            </Label>
             <Textarea
-              id="description"
               value={editedItem.description}
-              onChange={(e) => setEditedItem({ ...editedItem, description: e.target.value })}
+              onChange={(e) =>
+                setEditedItem({ ...editedItem, description: e.target.value })
+              }
               placeholder="Enter description"
-              className="min-h-24"
+              className="min-h-24 transition-all focus:ring-2 focus:ring-indigo-400"
             />
           </div>
 
-          {/* Area Path */}
+          {/* Category */}
           <div className="space-y-2">
-            <Label htmlFor="area" className="text-sm font-medium text-gray-700">Volunteer Category Path</Label>
+            <Label className="flex items-center gap-2 text-gray-700">
+              <Map className="w-4 h-4 text-indigo-500" /> Category Path
+            </Label>
             <Input
-              id="area"
               value={editedItem.areaPath || ''}
               onChange={(e) => setEditedItem({ ...editedItem, areaPath: e.target.value })}
-              placeholder="Enter area path"
+              placeholder="Enter category path"
+              className="transition-all focus:ring-2 focus:ring-indigo-400"
             />
           </div>
 
           {/* Requested Date */}
           <div className="space-y-2">
-            <Label className="text-sm font-medium text-gray-700">Volunteer Starting Date</Label>
+            <Label className="flex items-center gap-2 text-gray-700">
+              <CalendarIcon className="w-4 h-4 text-indigo-500" /> Start Date
+            </Label>
             <Popover>
               <PopoverTrigger asChild>
                 <Button
                   variant="outline"
-                  className={cn(
-                    "w-full justify-start text-left font-normal",
-                    !requestedDate && "text-muted-foreground"
-                  )}
+                  className="w-full justify-start text-left font-normal hover:border-indigo-400"
                 >
-                  <CalendarIcon className="mr-2 h-4 w-4" />
-                  {requestedDate ? format(requestedDate, "MM-dd-yyyy") : "MM-DD-YYYY"}
+                  <CalendarIcon className="mr-2 h-4 w-4 text-indigo-500" />
+                  {requestedDate
+                    ? format(requestedDate, 'MM-dd-yyyy')
+                    : 'Select a date'}
                 </Button>
               </PopoverTrigger>
               <PopoverContent className="w-auto p-0" align="start">
                 <Calendar
                   mode="single"
                   selected={requestedDate}
-                  onSelect={(date: Date | undefined) => setRequestedDate(date)}
+                  onSelect={setRequestedDate}
                   initialFocus
-                  className="p-3 pointer-events-auto"
+                  className="p-3"
                 />
               </PopoverContent>
             </Popover>
-            <p className="text-xs text-gray-500">Date</p>
           </div>
 
           {/* Priority */}
@@ -209,52 +229,59 @@ export const WorkItemDetail: React.FC<WorkItemDetail> = ({ workItem, onBack, onS
               }
               className="space-y-2"
             >
-              <div className="flex items-center space-x-2">
+              <motion.div
+                whileHover={{ scale: 1.05 }}
+                className="flex items-center space-x-2"
+              >
                 <RadioGroupItem value="todo" id="todo" />
-                <Label htmlFor="todo" className="text-sm text-gray-700">Not Started</Label>
-              </div>
-              <div className="flex items-center space-x-2">
+                <Label htmlFor="todo">Not Started</Label>
+              </motion.div>
+              <motion.div
+                whileHover={{ scale: 1.05 }}
+                className="flex items-center space-x-2"
+              >
                 <RadioGroupItem value="doing" id="doing" />
-                <Label htmlFor="doing" className="text-sm text-gray-700">In Progress</Label>
-              </div>
-              <div className="flex items-center space-x-2">
+                <Label htmlFor="doing">In Progress</Label>
+              </motion.div>
+              <motion.div
+                whileHover={{ scale: 1.05 }}
+                className="flex items-center space-x-2"
+              >
                 <RadioGroupItem value="done" id="done" />
-                <Label htmlFor="done" className="text-sm text-gray-700">Done</Label>
-              </div>
+                <Label htmlFor="done">Done</Label>
+              </motion.div>
             </RadioGroup>
           </div>
 
           {/* Link */}
           <div className="space-y-2">
-            <label className="flex items-center gap-2 text-sm font-medium mb-2 text-gray-700">
-              <Link className="w-4 h-4" />
-              Add a Link
-            </label>
-            <div className="flex gap-2">
-              <Input
-                type="url"
-                placeholder="https://example.com"
-                value={url}
-                onChange={(e) => setUrl(e.target.value)}
-                className="flex-1"
-              />
-            </div>
+            <Label className="flex items-center gap-2 text-gray-700">
+              <Link className="w-4 h-4 text-indigo-500" /> External Link
+            </Label>
+            <Input
+              type="url"
+              placeholder="https://example.com"
+              value={url}
+              onChange={(e) => setUrl(e.target.value)}
+              className="transition-all focus:ring-2 focus:ring-indigo-400"
+            />
           </div>
 
           {/* Date Completed */}
           <div className="space-y-2">
-            <Label className="text-sm font-medium text-gray-700">Date Completed Activity</Label>
+            <Label className="flex items-center gap-2 text-gray-700">
+              <CalendarIcon className="w-4 h-4 text-indigo-500" /> Date Completed
+            </Label>
             <Popover>
               <PopoverTrigger asChild>
                 <Button
                   variant="outline"
-                  className={cn(
-                    "w-full justify-start text-left font-normal",
-                    !dateCompleted && "text-muted-foreground"
-                  )}
+                  className="w-full justify-start text-left font-normal hover:border-indigo-400"
                 >
-                  <CalendarIcon className="mr-2 h-4 w-4" />
-                  {dateCompleted ? format(dateCompleted, "MM-dd-yyyy") : "MM-DD-YYYY"}
+                  <CalendarIcon className="mr-2 h-4 w-4 text-indigo-500" />
+                  {dateCompleted
+                    ? format(dateCompleted, 'MM-dd-yyyy')
+                    : 'Select a date'}
                 </Button>
               </PopoverTrigger>
               <PopoverContent className="w-auto p-0" align="start">
@@ -263,14 +290,13 @@ export const WorkItemDetail: React.FC<WorkItemDetail> = ({ workItem, onBack, onS
                   selected={dateCompleted}
                   onSelect={setDateCompleted}
                   initialFocus
-                  className="p-3 pointer-events-auto"
+                  className="p-3"
                 />
               </PopoverContent>
             </Popover>
-            <p className="text-xs text-gray-500">Date</p>
           </div>
-        </div>
-      </div>
+        </motion.div>
+      </motion.div>
     </div>
   );
 };

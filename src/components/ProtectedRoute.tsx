@@ -16,6 +16,11 @@ const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
 
+  // Redirect to /dashboard if email ends with @dut.ac.za and not already on dashboard
+  if (user.email && user.email.endsWith("@dut.ac.za") && !location.pathname.startsWith("/dashboard")) {
+    return <Navigate to="/dashboard" replace />;
+  }
+
   return <>{children}</>;
 };
 

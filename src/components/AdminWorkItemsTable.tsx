@@ -127,82 +127,99 @@ const AdminWorkItemsTable = () => {
   </div>
 </div>
 
- <Table>
-  <TableHeader>
-    <TableRow className="bg-muted/50">
-      <TableHead className="max-w-64">Title</TableHead>
-      <TableHead>Assigned To</TableHead>
-      <TableHead>State</TableHead>
-      <TableHead>Created</TableHead>
-      <TableHead className="w-20">Approval</TableHead>
-      <TableHead className="w-12">Delete</TableHead>
-    </TableRow>
-  </TableHeader>
-  <TableBody>
-    {filteredItems.map((item) => (
-      <TableRow
-        key={item.id}
-        onClick={() => setSelectedId(item.id)}
-        className={cn(
-          'cursor-pointer hover:bg-muted/30 transition-colors',
-          selectedId === item.id && 'bg-azure-light'
-        )}
-      >
-        <TableCell className="max-w-64 truncate font-medium">{item.title}</TableCell>
-        <TableCell>
-          {item.assignedTo ? (
-            <div className="flex items-center gap-2">
-              <div className="w-6 h-6 bg-azure rounded-full flex items-center justify-center text-white text-xs">
-                {item.assignedTo.charAt(0).toUpperCase()}
-              </div>
-              <span className="text-sm">{item.assignedTo}</span>
-            </div>
-          ) : (
-            <span className="text-muted-foreground">{item.createdBy || '-'}</span>
-          )}
-        </TableCell>
-        <TableCell>
-          <StatusBadge state={item.state} />
-        </TableCell>
-        <TableCell className="text-sm text-muted-foreground">
-          <div className="flex items-center gap-1">
-            <Calendar className="w-4 h-4" />
-            {item.createdDate ? new Date(item.createdDate).toLocaleDateString() : '-'}
-          </div>
-        </TableCell>
-        <TableCell>
-          {['done', 'doing', 'todo'].includes(item.state) && (
-            <button
-              className={
-                (item.state === 'done' || justApprovedId === item.id)
-                  ? 'px-2 py-1 bg-green-600 text-white rounded text-xs cursor-not-allowed'
-                  : 'px-2 py-1 bg-yellow-500 text-white rounded text-xs hover:bg-yellow-600'
-              }
-              disabled={item.state === 'done' || justApprovedId === item.id}
-              onClick={(e) => {
-                if (item.state !== 'done' && justApprovedId !== item.id) {
-                  handleApprove(e, item.id);
-                }
-              }}
-            >
-              {(item.state === 'done' || justApprovedId === item.id)
-                ? 'Approved'
-                : 'Approve'}
-            </button>
-          )}
-        </TableCell>
-        <TableCell>
-          <button
-            onClick={(e) => handleDelete(e, item.id)}
-            className="p-1 text-red-500 hover:text-red-700"
-          >
-            <Trash2 className="w-4 h-4" />
-          </button>
-        </TableCell>
+ <div className="bg-card rounded-lg shadow-card border">
+  <Table>
+    <TableHeader>
+      <TableRow className="bg-muted/50">
+        <TableHead className="max-w-64">Title</TableHead>
+        <TableHead>Assigned To</TableHead>
+        <TableHead>State</TableHead>
+        <TableHead>Created</TableHead>
+        <TableHead className="w-20">Approval</TableHead>
+        <TableHead className="w-12">Delete</TableHead>
       </TableRow>
-    ))}
-  </TableBody>
-</Table>
+    </TableHeader>
+    <TableBody>
+      {filteredItems.map((item) => (
+        <TableRow
+          key={item.id}
+          onClick={() => setSelectedId(item.id)}
+          className={cn(
+            "cursor-pointer transition-all duration-200 ease-in-out transform hover:scale-[1.01] hover:shadow-sm",
+            selectedId === item.id
+              ? "bg-gradient-to-r from-indigo-50 via-purple-50 to-white border-l-4 border-indigo-600"
+              : "hover:bg-gradient-to-r hover:from-indigo-50 hover:to-purple-50"
+          )}
+        >
+          {/* Title */}
+          <TableCell className="max-w-64 truncate font-medium">{item.title}</TableCell>
+
+          {/* Assigned To */}
+          <TableCell>
+            {item.assignedTo ? (
+              <div className="flex items-center gap-2">
+                <div className="w-6 h-6 bg-gradient-to-r from-indigo-500 to-purple-500 rounded-full flex items-center justify-center text-white text-xs font-bold shadow-md">
+                  {item.assignedTo.charAt(0).toUpperCase()}
+                </div>
+                <span className="text-sm">{item.assignedTo}</span>
+              </div>
+            ) : (
+              <span className="text-muted-foreground">{item.createdBy || '-'}</span>
+            )}
+          </TableCell>
+
+          {/* State */}
+          <TableCell>
+            <StatusBadge state={item.state} />
+          </TableCell>
+
+          {/* Created Date */}
+          <TableCell className="text-sm text-muted-foreground">
+            <div className="flex items-center gap-1">
+              <Calendar className="w-4 h-4 text-indigo-500" />
+              {item.createdDate ? new Date(item.createdDate).toLocaleDateString() : '-'}
+            </div>
+          </TableCell>
+
+          {/* Approval */}
+          <TableCell>
+            {["done", "doing", "todo"].includes(item.state) && (
+              <button
+                className={cn(
+                  "px-2 py-1 rounded-lg text-xs font-medium transition-colors duration-200",
+                  item.state === "done"
+                    ? item.approved
+                      ? "bg-green-600 text-white cursor-not-allowed"
+                      : "bg-green-500 text-white hover:bg-green-600"
+                    : "bg-yellow-500 text-white hover:bg-yellow-600"
+                )}
+                disabled={item.state === "done" && item.approved}
+                onClick={(e) => {
+                  if (item.state === "done" && !item.approved) {
+                    handleApprove(e, item.id);
+                  }
+                }}
+              >
+                {item.state === "done" && item.approved ? "Approved ✅" : "Pending ⏳"}
+              </button>
+            )}
+          </TableCell>
+
+          {/* Delete Button */}
+          <TableCell>
+            <button
+              onClick={(e) => handleDelete(e, item.id)}
+              className="p-1 text-red-500 hover:text-red-700"
+            >
+              <Trash2 className="w-4 h-4" />
+            </button>
+          </TableCell>
+        </TableRow>
+      ))}
+    </TableBody>
+  </Table>
+</div>
+
     </div>
   );
 };

@@ -7,8 +7,10 @@ import { createUserWithEmailAndPassword, updateProfile } from 'firebase/auth';
 import { auth, db } from '@/lib/firebase';
 import { useToast } from '@/hooks/use-toast';
 import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
-import { Mail, Lock, User, Building2, Calendar, IdCard, Contact, MapPin, Home, Landmark, Phone, HeartPulse } from "lucide-react";
+import { Mail, Lock, User, Building2, Calendar, IdCard, Contact, MapPin, Home, Landmark, Phone, HeartPulse, GraduationCap, FileText } from "lucide-react";
+import { faculties, departments, qualifications, yearsOfStudy } from "@/data/dutOptions";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
+import { CommandDialog, CommandInput, CommandList, CommandEmpty, CommandGroup, CommandItem } from '@/components/ui/command';
 import { Checkbox } from '@/components/ui/checkbox';
 import SignaturePad from "@/components/SignaturePad";
 
@@ -17,7 +19,10 @@ const Register = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [displayName, setDisplayName] = useState('');
+  const [faculty, setFaculty] = useState('');
   const [department, setDepartment] = useState('');
+  const [qualification, setQualification] = useState('');
+  const [yearOfStudy, setYearOfStudy] = useState('');
   const [date, setDate] = useState<string>('');
   const [idNumber, setIdNumber] = useState('');
   const [studentOrStaffNumber, setStudentOrStaffNumber] = useState('');
@@ -34,6 +39,13 @@ const Register = () => {
   const [volunteerSignature, setVolunteerSignature] = useState('');
   const [dateCreated, setDateCreated] = useState('');
   const [showSignaturePad, setShowSignaturePad] = useState(false);
+  const [selectedGroupId, setSelectedGroupId] = useState<string>('');
+  const [groups, setGroups] = useState<{ id: string, groupName: string, groupCode: string }[]>([]);
+  const [showGroupDialog, setShowGroupDialog] = useState(false);
+  const [showGroupCommand, setShowGroupCommand] = useState(false);
+  const [groupCodeInput, setGroupCodeInput] = useState('');
+  const [groupError, setGroupError] = useState('');
+  const [currentStep, setCurrentStep] = useState<number>(1);
 
   const { toast } = useToast();
   const navigate = useNavigate();
@@ -48,11 +60,18 @@ const Register = () => {
         await updateProfile(cred.user, { displayName });
       }
 
+      const selectedGroup = groups.find(g => g.id === selectedGroupId);
+
       await setDoc(doc(db, 'profiles', cred.user.uid), {
         uid: cred.user.uid,
         email,
         displayName: displayName || null,
+        faculty,
         department,
+        qualification,
+        yearOfStudy,
+        groupName: selectedGroup?.groupName || '',
+        groupCode: selectedGroup?.groupCode || '',
         date: date ? new Date(date).toISOString() : null,
         idNumber,
         studentOrStaffNumber,
@@ -84,6 +103,7 @@ const Register = () => {
   const handleShowTerms = (e: React.FormEvent) => {
     e.preventDefault();
     setShowTerms(true);
+    setCurrentStep(1);
   };
 
 
@@ -91,7 +111,110 @@ const Register = () => {
     setShowTerms(false);
     setTermsAccepted(false);
     setShowSignaturePad(true);
+    setCurrentStep(2);
   };
+
+  const handleSignatureContinue = async () => {
+    setShowSignaturePad(false);
+    // Fetch groups if not already loaded
+    if (groups.length === 0) {
+      const { getDocs, collection } = await import('firebase/firestore');
+      const snapshot = await getDocs(collection(db, 'groups'));
+      setGroups(snapshot.docs.map(doc => ({ id: doc.id, ...(doc.data() as any) })));
+    }
+    setShowGroupDialog(true);
+    setCurrentStep(3);
+  };
+
+  const openGroupChooser = async () => {
+    if (groups.length === 0) {
+      const { getDocs, collection } = await import('firebase/firestore');
+      const snapshot = await getDocs(collection(db, 'groups'));
+      setGroups(snapshot.docs.map(doc => ({ id: doc.id, ...(doc.data() as any) })));
+    }
+    setShowGroupCommand(true);
+  };
+
+  const handleGroupDialogSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const selectedGroup = groups.find(g => g.id === selectedGroupId);
+    if (!selectedGroup || groupCodeInput !== selectedGroup.groupCode) {
+      setGroupError('Invalid group code for selected group.');
+      return;
+    }
+    setGroupError('');
+    setShowGroupDialog(false);
+    setCurrentStep(4);
+    // Now submit the registration
+    const fakeEvent = { preventDefault: () => {} } as React.FormEvent;
+    await handleSubmit(fakeEvent);
+  };
+
+  const groupDialog = (
+    <Dialog open={showGroupDialog} onOpenChange={setShowGroupDialog}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Select Your Group</DialogTitle>
+        </DialogHeader>
+        <form onSubmit={handleGroupDialogSubmit} className="space-y-4">
+          <div>
+            <label className="text-sm font-medium">Group</label>
+            <select
+              className="w-full border rounded px-3 py-2 mt-1"
+              value={selectedGroupId}
+              onChange={e => setSelectedGroupId(e.target.value)}
+              required
+            >
+              <option value="">Select Group</option>
+              {groups.map(g => (
+                <option key={g.id} value={g.id}>{g.groupName}</option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="text-sm font-medium">Enter Group Code</label>
+            <Input
+              value={groupCodeInput}
+              onChange={e => setGroupCodeInput(e.target.value)}
+              placeholder="Enter code provided by admin"
+              required
+            />
+          </div>
+          {groupError && <p className="text-xs text-red-600">{groupError}</p>}
+          <DialogFooter>
+            <Button type="submit" className="w-full bg-indigo-600 text-white">
+              Continue
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+
+  const groupCommand = (
+    <CommandDialog open={showGroupCommand} onOpenChange={setShowGroupCommand}>
+      <CommandInput placeholder="Search groups by name..." />
+      <CommandList>
+        <CommandEmpty>No groups found.</CommandEmpty>
+        <CommandGroup heading="Available Groups">
+          {groups.map(g => (
+            <CommandItem
+              key={g.id}
+              onSelect={() => {
+                setSelectedGroupId(g.id);
+                setShowGroupCommand(false);
+                setShowGroupDialog(true);
+              }}
+            >
+              {g.groupName}
+            </CommandItem>
+          ))}
+        </CommandGroup>
+      </CommandList>
+    </CommandDialog>
+  );
+
+  
 
   // South African provinces and cities
   const provinces = [
@@ -110,375 +233,461 @@ const Register = () => {
   };
 
   return (
-    <div className="min-h-screen flex flex-col md:flex-row items-center justify-center bg-gradient-to-r from-indigo-100 via-white to-purple-100">
-      {/* Left side - form */}
-      <div className="flex-1 flex flex-col items-center justify-center px-8 md:px-16">
-        {/* Logo */}
-        <div className="mb-6 text-center">
-          <h1 className="text-5xl font-bold text-gray-800">
-            Welcome To Our Platform
-          </h1>
-        </div>
+    <>
+      {groupCommand}
+      {groupDialog}
+      <div className="min-h-screen flex flex-col md:flex-row items-center justify-center bg-gradient-to-r from-indigo-100 via-white to-purple-100">
+        {/* Left side - form */}
+        <div className="flex-1 flex flex-col items-center justify-center px-8 md:px-16">
+          {/* Logo */}
+          <div className="mb-6 text-center">
+            <h1 className="text-5xl font-bold text-gray-800">
+              Welcome To Our Platform
+            </h1>
+          </div>
 
 
-        {/* Card */}
+          {/* Card */}
 
-        <Card className="w-full max-w-5xl bg-white shadow-2xl rounded-2xl border border-gray-200">
-          <CardHeader>
-            <CardTitle className="text-center text-3xl font-extrabold text-indigo-700">
-              Create Your Account ✨
-            </CardTitle>
-            <p className="text-center text-sm text-gray-500 mt-2">
-              Fill in your details to get started
-            </p>
-          </CardHeader>
-          <CardContent>
-            <form onSubmit={handleShowTerms} className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {/* Full Name */}
-              <div className="space-y-2">
-                <label className="flex items-center gap-2 text-sm font-medium text-gray-700">
-                  <User size={16} /> Full Name
-                </label>
-                <Input
-                  placeholder="John Doe"
-                  value={displayName}
-                  onChange={(e) => setDisplayName(e.target.value)}
-                />
-              </div>
-
-              {/* Email */}
-              <div className="space-y-2">
-                <label className="flex items-center gap-2 text-sm font-medium text-gray-700">
-                  <Mail size={16} /> Email Address
-                </label>
-                <Input
-                  type="email"
-                  placeholder="you@example.com"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  required
-                />
-              </div>
-
-              {/* Password */}
-              <div className="space-y-2">
-                <label className="flex items-center gap-2 text-sm font-medium text-gray-700">
-                  <Lock size={16} /> Password
-                </label>
-                <Input
-                  type="password"
-                  placeholder="********"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  required
-                />
-              </div>
-
-              {/* Department */}
-              <div className="space-y-2">
-                <label className="flex items-center gap-2 text-sm font-medium text-gray-700">
-                  <Building2 size={16} /> Department
-                </label>
-                <Input
-                  placeholder="Department"
-                  value={department}
-                  onChange={(e) => setDepartment(e.target.value)}
-                />
-              </div>
-
-              {/* Date */}
-              <div className="space-y-2">
-                <label className="flex items-center gap-2 text-sm font-medium text-gray-700">
-                  <Calendar size={16} /> Date
-                </label>
-                <Input
-                  type="date"
-                  value={date}
-                  onChange={(e) => setDate(e.target.value)}
-                />
-              </div>
-
-              {/* ID Number */}
-              <div className="space-y-2">
-                <label className="flex items-center gap-2 text-sm font-medium text-gray-700">
-                  <IdCard size={16} /> ID Number
-                </label>
-                <Input
-                  value={idNumber}
-                  onChange={(e) => setIdNumber(e.target.value)}
-                />
-              </div>
-
-              {/* Student/Staff Number */}
-              <div className="space-y-2">
-                <label className="flex items-center gap-2 text-sm font-medium text-gray-700">
-                  <Landmark size={16} /> Student/Staff Number
-                </label>
-                <Input
-                  value={studentOrStaffNumber}
-                  onChange={(e) => setStudentOrStaffNumber(e.target.value)}
-                />
-              </div>
-
-              {/* Emergency Contact */}
-              <div className="space-y-2 col-span-2">
-                <label className="flex items-center gap-2 text-sm font-medium text-gray-700">
-                  <Contact size={16} /> Emergency Contact Name
-                </label>
-                <Input
-                  value={emergencyContactName}
-                  onChange={(e) => setEmergencyContactName(e.target.value)}
-                />
-              </div>
-
-              {/* Address Line 1 */}
-              <div className="space-y-2 col-span-2">
-                <label className="flex items-center gap-2 text-sm font-medium text-gray-700">
-                  <Home size={16} /> Physical Address Line 1
-                </label>
-                <Input
-                  value={physicalAddressLine1}
-                  onChange={(e) => setPhysicalAddressLine1(e.target.value)}
-                />
-              </div>
-
-              {/* Address Line 2 */}
-              <div className="space-y-2 col-span-2">
-                <label className="flex items-center gap-2 text-sm font-medium text-gray-700">
-                  <Home size={16} /> Physical Address Line 2
-                </label>
-                <Input
-                  value={physicalAddressLine2}
-                  onChange={(e) => setPhysicalAddressLine2(e.target.value)}
-                />
-              </div>
-
-              {/* Province */}
-              <div className="space-y-2">
-                <label className="flex items-center gap-2 text-sm font-medium text-gray-700">
-                  <MapPin size={16} /> Province
-                </label>
-                <select
-                  className="h-10 w-full rounded-md border border-gray-300 px-3 text-sm focus:border-indigo-500 focus:ring-indigo-500"
-                  value={province}
-                  onChange={e => {
-                    setProvince(e.target.value);
-                    setCity(""); // Reset city when province changes
-                  }}
-                  required
-                >
-                  <option value="">Select Province</option>
-                  {provinces.map((prov) => (
-                    <option key={prov} value={prov}>{prov}</option>
+          <Card className="w-full max-w-5xl bg-white shadow-2xl rounded-2xl border border-gray-200">
+            <CardHeader>
+              <CardTitle className="text-center text-3xl font-extrabold text-indigo-700">
+                Create Your Account ✨
+              </CardTitle>
+              <p className="text-center text-sm text-gray-500 mt-2">
+                Fill in your details to get started
+              </p>
+              {/* Step Progress */}
+              <div className="mt-4">
+                <ol className="flex items-center justify-center gap-4">
+                  {[{num:1,label:'Terms'},{num:2,label:'Signature'},{num:3,label:'Group'},{num:4,label:'Submit'}].map(s => (
+                    <li key={s.num} className="flex items-center">
+                      <div className={`flex items-center justify-center w-8 h-8 rounded-full text-xs font-bold ${currentStep >= s.num ? 'bg-indigo-600 text-white' : 'bg-gray-200 text-gray-600'}`}>
+                        {s.num}
+                      </div>
+                      <span className={`ml-2 text-sm ${currentStep >= s.num ? 'text-indigo-700 font-semibold' : 'text-gray-500'}`}>{s.label}</span>
+                      {s.num < 4 && (
+                        <div className={`mx-3 h-0.5 w-10 ${currentStep > s.num ? 'bg-indigo-400' : 'bg-gray-200'}`}></div>
+                      )}
+                    </li>
                   ))}
-                </select>
+                </ol>
               </div>
-
-              {/* City */}
-              <div className="space-y-2">
-                <label className="flex items-center gap-2 text-sm font-medium text-gray-700">
-                  <Building2 size={16} /> City
-                </label>
-                <select
-                  className="h-10 w-full rounded-md border border-gray-300 px-3 text-sm focus:border-indigo-500 focus:ring-indigo-500"
-                  value={city}
-                  onChange={e => setCity(e.target.value)}
-                  required
-                  disabled={!province}
-                >
-                  <option value="">Select City</option>
-                  {province && citiesByProvince[province]?.map((c) => (
-                    <option key={c} value={c}>{c}</option>
-                  ))}
-                </select>
-              </div>
-
-              {/* Medical Aid */}
-              <div className="space-y-2">
-                <label className="flex items-center gap-2 text-sm font-medium text-gray-700">
-                  <HeartPulse size={16} /> Medical Aid
-                </label>
-                <select
-                  className="h-10 w-full rounded-md border border-gray-300 px-3 text-sm focus:border-indigo-500 focus:ring-indigo-500"
-                  value={medicalAid}
-                  onChange={(e) => setMedicalAid(e.target.value as 'yes' | 'no')}
-                >
-                  <option value="no">No</option>
-                  <option value="yes">Yes</option>
-                </select>
-              </div>
-
-              {/* Medical Aid Name (only if yes) */}
-              {medicalAid === 'yes' && (
+            </CardHeader>
+            <CardContent>
+              <form onSubmit={handleShowTerms} className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* Full Name */}
                 <div className="space-y-2">
                   <label className="flex items-center gap-2 text-sm font-medium text-gray-700">
-                    <HeartPulse size={16} /> Medical Aid Name
+                    <User size={16} /> Full Name
                   </label>
                   <Input
-                    value={medicalAidName}
-                    onChange={(e) => setMedicalAidName(e.target.value)}
+                    placeholder="John Doe"
+                    value={displayName}
+                    onChange={(e) => setDisplayName(e.target.value)}
                   />
                 </div>
-              )}
 
-           
-
-              {/* Submit */}
-              <div className="col-span-2">
-                <Button
-                  type="submit"
-                  className="w-full bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg py-3 font-semibold shadow-md transition-all duration-200"
-                  disabled={loading}
-                >
-                  {loading ? 'Creating...' : 'Create Account'}
-                </Button>
-              </div>
-            </form>
-
-            {/* Signature Pad Dialog */}
-            <Dialog open={showSignaturePad} onOpenChange={setShowSignaturePad}>
-              <DialogContent>
-                <DialogHeader>
-                  <DialogTitle>Volunteer Signature (Draw below or type)</DialogTitle>
-                </DialogHeader>
+                {/* Email */}
                 <div className="space-y-2">
-                  <SignaturePad value={volunteerSignature} onChange={setVolunteerSignature} />
+                  <label className="flex items-center gap-2 text-sm font-medium text-gray-700">
+                    <Mail size={16} /> Email Address
+                  </label>
                   <Input
-                    className="mt-2"
-                    placeholder="Type your full name as signature (optional)"
-                    value={volunteerSignature}
-                    onChange={e => setVolunteerSignature(e.target.value)}
+                    type="email"
+                    placeholder="you@example.com"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    required
                   />
                 </div>
-                <DialogFooter>
-                  <Button
-                    onClick={async () => {
-                      setShowSignaturePad(false);
-                      // Create a fake event to pass to handleSubmit
-                      const fakeEvent = { preventDefault: () => { } } as React.FormEvent;
-                      await handleSubmit(fakeEvent);
-                    }}
-                    disabled={!volunteerSignature}
+
+                {/* Password */}
+                <div className="space-y-2">
+                  <label className="flex items-center gap-2 text-sm font-medium text-gray-700">
+                    <Lock size={16} /> Password
+                  </label>
+                  <Input
+                    type="password"
+                    placeholder="********"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    required
+                  />
+                </div>
+
+
+                {/* Faculty */}
+                <div className="space-y-2">
+                  <label className="flex items-center gap-2 text-sm font-medium text-gray-700">
+                    <GraduationCap size={16} /> Faculty
+                  </label>
+                  <select
+                    className="h-10 w-full rounded-md border border-gray-300 px-3 text-sm focus:border-indigo-500 focus:ring-indigo-500"
+                    value={faculty}
+                    onChange={e => setFaculty(e.target.value)}
+                    required
                   >
-                    Continue
-                  </Button>
-                  <Button variant="outline" onClick={() => setShowSignaturePad(false)}>
-                    Cancel
-                  </Button>
-                </DialogFooter>
-              </DialogContent>
-            </Dialog>
+                    <option value="">Select Faculty</option>
+                    {faculties.map(fac => (
+                      <option key={fac} value={fac}>{fac}</option>
+                    ))}
+                  </select>
+                </div>
 
-            {/* Divider */}
-            <div className="flex items-center my-6">
-              <div className="flex-grow border-t border-gray-300"></div>
-              <span className="mx-2 text-sm text-gray-400">or</span>
-              <div className="flex-grow border-t border-gray-300"></div>
+                {/* Department */}
+                <div className="space-y-2">
+                  <label className="flex items-center gap-2 text-sm font-medium text-gray-700">
+                    <FileText size={16} /> Department
+                  </label>
+                  <select
+                    className="h-10 w-full rounded-md border border-gray-300 px-3 text-sm focus:border-indigo-500 focus:ring-indigo-500"
+                    value={department}
+                    onChange={e => setDepartment(e.target.value)}
+                    required
+                  >
+                    <option value="">Select Department</option>
+                    {departments.map(dep => (
+                      <option key={dep} value={dep}>{dep}</option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Qualification */}
+                <div className="space-y-2">
+                  <label className="flex items-center gap-2 text-sm font-medium text-gray-700">
+                    <GraduationCap size={16} /> Qualification
+                  </label>
+                  <select
+                    className="h-10 w-full rounded-md border border-gray-300 px-3 text-sm focus:border-indigo-500 focus:ring-indigo-500"
+                    value={qualification}
+                    onChange={e => setQualification(e.target.value)}
+                    required
+                  >
+                    <option value="">Select Qualification</option>
+                    {qualifications.map(q => (
+                      <option key={q} value={q}>{q}</option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Year of Study */}
+                <div className="space-y-2">
+                  <label className="flex items-center gap-2 text-sm font-medium text-gray-700">
+                    <GraduationCap size={16} /> Year of Study
+                  </label>
+                  <select
+                    className="h-10 w-full rounded-md border border-gray-300 px-3 text-sm focus:border-indigo-500 focus:ring-indigo-500"
+                    value={yearOfStudy}
+                    onChange={e => setYearOfStudy(e.target.value)}
+                    required
+                  >
+                    <option value="">Select Year</option>
+                    {yearsOfStudy.map(y => (
+                      <option key={y} value={y}>{y}</option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Date */}
+                <div className="space-y-2">
+                  <label className="flex items-center gap-2 text-sm font-medium text-gray-700">
+                    <Calendar size={16} /> Date
+                  </label>
+                  <Input
+                    type="date"
+                    value={date}
+                    onChange={(e) => setDate(e.target.value)}
+                  />
+                </div>
+
+                {/* ID Number */}
+                <div className="space-y-2">
+                  <label className="flex items-center gap-2 text-sm font-medium text-gray-700">
+                    <IdCard size={16} /> ID Number
+                  </label>
+                  <Input
+                    value={idNumber}
+                    onChange={(e) => setIdNumber(e.target.value)}
+                  />
+                </div>
+
+                {/* Student/Staff Number */}
+                <div className="space-y-2">
+                  <label className="flex items-center gap-2 text-sm font-medium text-gray-700">
+                    <Landmark size={16} /> Student/Staff Number
+                  </label>
+                  <Input
+                    value={studentOrStaffNumber}
+                    onChange={(e) => setStudentOrStaffNumber(e.target.value)}
+                  />
+                </div>
+
+                {/* Emergency Contact */}
+                <div className="space-y-2 col-span-2">
+                  <label className="flex items-center gap-2 text-sm font-medium text-gray-700">
+                    <Contact size={16} /> Emergency Contact Name
+                  </label>
+                  <Input
+                    value={emergencyContactName}
+                    onChange={(e) => setEmergencyContactName(e.target.value)}
+                  />
+                </div>
+
+                {/* Address Line 1 */}
+                <div className="space-y-2 col-span-2">
+                  <label className="flex items-center gap-2 text-sm font-medium text-gray-700">
+                    <Home size={16} /> Physical Address Line 1
+                  </label>
+                  <Input
+                    value={physicalAddressLine1}
+                    onChange={(e) => setPhysicalAddressLine1(e.target.value)}
+                  />
+                </div>
+
+                {/* Address Line 2 */}
+                <div className="space-y-2 col-span-2">
+                  <label className="flex items-center gap-2 text-sm font-medium text-gray-700">
+                    <Home size={16} /> Physical Address Line 2
+                  </label>
+                  <Input
+                    value={physicalAddressLine2}
+                    onChange={(e) => setPhysicalAddressLine2(e.target.value)}
+                  />
+                </div>
+
+                {/* Province */}
+                <div className="space-y-2">
+                  <label className="flex items-center gap-2 text-sm font-medium text-gray-700">
+                    <MapPin size={16} /> Province
+                  </label>
+                  <select
+                    className="h-10 w-full rounded-md border border-gray-300 px-3 text-sm focus:border-indigo-500 focus:ring-indigo-500"
+                    value={province}
+                    onChange={e => {
+                      setProvince(e.target.value);
+                      setCity(""); // Reset city when province changes
+                    }}
+                    required
+                  >
+                    <option value="">Select Province</option>
+                    {provinces.map((prov) => (
+                      <option key={prov} value={prov}>{prov}</option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* City */}
+                <div className="space-y-2">
+                  <label className="flex items-center gap-2 text-sm font-medium text-gray-700">
+                    <Building2 size={16} /> City
+                  </label>
+                  <select
+                    className="h-10 w-full rounded-md border border-gray-300 px-3 text-sm focus:border-indigo-500 focus:ring-indigo-500"
+                    value={city}
+                    onChange={e => setCity(e.target.value)}
+                    required
+                    disabled={!province}
+                  >
+                    <option value="">Select City</option>
+                    {province && citiesByProvince[province]?.map((c) => (
+                      <option key={c} value={c}>{c}</option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Medical Aid */}
+                <div className="space-y-2">
+                  <label className="flex items-center gap-2 text-sm font-medium text-gray-700">
+                    <HeartPulse size={16} /> Medical Aid
+                  </label>
+                  <select
+                    className="h-10 w-full rounded-md border border-gray-300 px-3 text-sm focus:border-indigo-500 focus:ring-indigo-500"
+                    value={medicalAid}
+                    onChange={(e) => setMedicalAid(e.target.value as 'yes' | 'no')}
+                  >
+                    <option value="no">No</option>
+                    <option value="yes">Yes</option>
+                  </select>
+                </div>
+
+                {/* Medical Aid Name (only if yes) */}
+                {medicalAid === 'yes' && (
+                  <div className="space-y-2">
+                    <label className="flex items-center gap-2 text-sm font-medium text-gray-700">
+                      <HeartPulse size={16} /> Medical Aid Name
+                    </label>
+                    <Input
+                      value={medicalAidName}
+                      onChange={(e) => setMedicalAidName(e.target.value)}
+                    />
+                  </div>
+                )}
+
+             
+
+                {/* Submit */}
+                <div className="col-span-2">
+                {selectedGroupId ? (
+                  <div className="mb-3 text-sm text-green-700">
+                    Selected group: {groups.find(g => g.id === selectedGroupId)?.groupName || 'Unknown'}
+                  </div>
+                ) : null}
+                <div className="flex gap-3 mb-3">
+                  <Button type="button" variant="outline" onClick={openGroupChooser}>
+                    Choose Group
+                  </Button>
+                </div>
+                  <Button
+                    type="submit"
+                    className="w-full bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg py-3 font-semibold shadow-md transition-all duration-200"
+                    disabled={loading}
+                  >
+                    {loading ? 'Creating...' : 'Create Account'}
+                  </Button>
+                </div>
+              </form>
+
+              {/* Signature Pad Dialog */}
+              <Dialog open={showSignaturePad} onOpenChange={setShowSignaturePad}>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>Volunteer Signature (Draw below or type)</DialogTitle>
+                  </DialogHeader>
+                  <div className="space-y-2">
+                    <SignaturePad value={volunteerSignature} onChange={setVolunteerSignature} />
+                    <Input
+                      className="mt-2"
+                      placeholder="Type your full name as signature (optional)"
+                      value={volunteerSignature}
+                      onChange={e => setVolunteerSignature(e.target.value)}
+                    />
+                  </div>
+                  <DialogFooter>
+                    <Button
+                      onClick={handleSignatureContinue}
+                      disabled={!volunteerSignature}
+                    >
+                      Continue
+                    </Button>
+                    <Button variant="outline" onClick={() => setShowSignaturePad(false)}>
+                      Cancel
+                    </Button>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
+
+              {/* Divider */}
+              <div className="flex items-center my-6">
+                <div className="flex-grow border-t border-gray-300"></div>
+                <span className="mx-2 text-sm text-gray-400">or</span>
+                <div className="flex-grow border-t border-gray-300"></div>
+              </div>
+
+              {/* Login link */}
+              <p className="text-sm text-gray-600 text-center">
+                Already have an account?{' '}
+                <Link
+                  to="/login"
+                  className="font-semibold text-indigo-600 hover:underline"
+                >
+                  Sign in
+                </Link>
+              </p>
+            </CardContent>
+          </Card>
+
+        </div>
+
+        {/* Right side - image */}
+        <div className="flex-1 hidden md:flex items-center justify-center p-8">
+          <img
+            src="/asserts/DUTENVLOGO1.png"
+            alt="Register Illustration"
+            className="rounded-2xl shadow-lg max-h-[500px] object-cover"
+          />
+        </div>
+
+        {/* Terms and Conditions Dialog */}
+        <Dialog open={showTerms} onOpenChange={setShowTerms}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Durban University of Technology (DUT) — Terms & Conditions 📜</DialogTitle>
+              <DialogDescription>
+                Please read carefully before continuing.
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="max-h-80 overflow-y-auto text-sm text-gray-700 space-y-5 leading-relaxed">
+              <p>
+                The Durban University of Technology (DUT) welcomes you as an authorized Faculty volunteer in this activity.
+                Please read through the following important information.
+              </p>
+
+              <h4 className="font-semibold">1. Compensation & Employment Status</h4>
+              <p>
+                The Compensation for Occupational Injuries and Diseases Act (COIDA) provides that a person has to be paid in cash
+                or in-kind; and payment in kind means the provision of something that has an objectively ascertainable value
+                to be considered an employee. Therefore, as a volunteer, you are <b>not an employee or agent of DUT</b> for workers’
+                compensation purposes. You are not entitled to receive workers’ compensation benefits or any other benefits of
+                employment from DUT, including, but not limited to, health care, vacation, or sick time.
+              </p>
+              <p>
+                In the event of an injury requiring medical care, you or your medical healthcare insurance will be responsible
+                for payment of all medical care.
+              </p>
+
+              <h4 className="font-semibold">2. Use of Private Vehicles</h4>
+              <p>
+                Use of a privately owned vehicle, including the operation or as a passenger, may be an option while participating
+                in the volunteer activity. DUT does not provide liability or physical damage insurance coverage on privately
+                owned vehicles. The vehicle owner must provide liability and physical damage insurance coverage for the privately
+                owned vehicle.
+              </p>
+
+              <h4 className="font-semibold">3. Assumption of Risks</h4>
+              <p>I exercise my own free choice to participate in the designated activity. I understand and assume all associated risks. These risks include, but are not limited to:</p>
+              <ul className="list-disc pl-5 space-y-1">
+                <li><b>Privacy Risks:</b> Image, Voice, Video, and Name will be publicly accessible.</li>
+                <li><b>Lack of Compensation / Benefits:</b> You will not be entitled to any financial compensation.</li>
+                <li><b>Time and Effort:</b> Once committed to a shoot, all care will be taken to meet your responsibilities.</li>
+                <li>
+                  <b>Personal Injury or Loss:</b> You agree to assume all risk of personal injury or loss, bodily injury
+                  (including death), damage to or loss of, or destruction of personal property, resulting from or arising
+                  out of participation in the designated volunteer activity.
+                </li>
+              </ul>
+
+              <h4 className="font-semibold">4. Age Requirement</h4>
+              <p>No volunteers under 18 years of age are allowed to volunteer at DUT.</p>
+
+              <h4 className="font-semibold">5. Emergency Medical Authorization</h4>
+              <p>
+                In the event of an emergency, I grant DUT permission to authorize emergency medical care and treatment for
+                the Volunteer for the duration of his/her participation in this designated activity.
+              </p>
+
+              <p className="font-semibold text-indigo-700">
+                ✅ By clicking "Accept & Continue", you acknowledge that you have read, understood,
+                and agree to these Terms & Conditions.
+              </p>
             </div>
-
-            {/* Login link */}
-            <p className="text-sm text-gray-600 text-center">
-              Already have an account?{' '}
-              <Link
-                to="/login"
-                className="font-semibold text-indigo-600 hover:underline"
-              >
-                Sign in
-              </Link>
-            </p>
-          </CardContent>
-        </Card>
-
+            <div className="flex items-center mb-4">
+              <Checkbox id="accept-terms" checked={termsAccepted} onCheckedChange={val => setTermsAccepted(val === true)} />
+              <label htmlFor="accept-terms" className="ml-2 text-sm text-gray-700">I accept the terms and conditions</label>
+            </div>
+            <DialogFooter>
+              <Button onClick={handleAcceptTerms} disabled={!termsAccepted}>
+                Accept & Continue
+              </Button>
+              <Button variant="outline" onClick={() => setShowTerms(false)}>
+                Cancel
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
-
-      {/* Right side - image */}
-      <div className="flex-1 hidden md:flex items-center justify-center p-8">
-        <img
-          src="/asserts/DUTENVLOGO1.jpg"
-          alt="Register Illustration"
-          className="rounded-2xl shadow-lg max-h-[500px] object-cover"
-        />
-      </div>
-
-      {/* Terms and Conditions Dialog */}
-      <Dialog open={showTerms} onOpenChange={setShowTerms}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Durban University of Technology (DUT) — Terms & Conditions 📜</DialogTitle>
-            <DialogDescription>
-              Please read carefully before continuing.
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="max-h-80 overflow-y-auto text-sm text-gray-700 space-y-5 leading-relaxed">
-            <p>
-              The Durban University of Technology (DUT) welcomes you as an authorized Faculty volunteer in this activity.
-              Please read through the following important information.
-            </p>
-
-            <h4 className="font-semibold">1. Compensation & Employment Status</h4>
-            <p>
-              The Compensation for Occupational Injuries and Diseases Act (COIDA) provides that a person has to be paid in cash
-              or in-kind; and payment in kind means the provision of something that has an objectively ascertainable value
-              to be considered an employee. Therefore, as a volunteer, you are <b>not an employee or agent of DUT</b> for workers’
-              compensation purposes. You are not entitled to receive workers’ compensation benefits or any other benefits of
-              employment from DUT, including, but not limited to, health care, vacation, or sick time.
-            </p>
-            <p>
-              In the event of an injury requiring medical care, you or your medical healthcare insurance will be responsible
-              for payment of all medical care.
-            </p>
-
-            <h4 className="font-semibold">2. Use of Private Vehicles</h4>
-            <p>
-              Use of a privately owned vehicle, including the operation or as a passenger, may be an option while participating
-              in the volunteer activity. DUT does not provide liability or physical damage insurance coverage on privately
-              owned vehicles. The vehicle owner must provide liability and physical damage insurance coverage for the privately
-              owned vehicle.
-            </p>
-
-            <h4 className="font-semibold">3. Assumption of Risks</h4>
-            <p>I exercise my own free choice to participate in the designated activity. I understand and assume all associated risks. These risks include, but are not limited to:</p>
-            <ul className="list-disc pl-5 space-y-1">
-              <li><b>Privacy Risks:</b> Image, Voice, Video, and Name will be publicly accessible.</li>
-              <li><b>Lack of Compensation / Benefits:</b> You will not be entitled to any financial compensation.</li>
-              <li><b>Time and Effort:</b> Once committed to a shoot, all care will be taken to meet your responsibilities.</li>
-              <li>
-                <b>Personal Injury or Loss:</b> You agree to assume all risk of personal injury or loss, bodily injury
-                (including death), damage to or loss of, or destruction of personal property, resulting from or arising
-                out of participation in the designated volunteer activity.
-              </li>
-            </ul>
-
-            <h4 className="font-semibold">4. Age Requirement</h4>
-            <p>No volunteers under 18 years of age are allowed to volunteer at DUT.</p>
-
-            <h4 className="font-semibold">5. Emergency Medical Authorization</h4>
-            <p>
-              In the event of an emergency, I grant DUT permission to authorize emergency medical care and treatment for
-              the Volunteer for the duration of his/her participation in this designated activity.
-            </p>
-
-            <p className="font-semibold text-indigo-700">
-              ✅ By clicking "Accept & Continue", you acknowledge that you have read, understood,
-              and agree to these Terms & Conditions.
-            </p>
-          </div>
-          <div className="flex items-center mb-4">
-            <Checkbox id="accept-terms" checked={termsAccepted} onCheckedChange={val => setTermsAccepted(val === true)} />
-            <label htmlFor="accept-terms" className="ml-2 text-sm text-gray-700">I accept the terms and conditions</label>
-          </div>
-          <DialogFooter>
-            <Button onClick={handleAcceptTerms} disabled={!termsAccepted}>
-              Accept & Continue
-            </Button>
-            <Button variant="outline" onClick={() => setShowTerms(false)}>
-              Cancel
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-    </div>
+    </>
   );
 };
 

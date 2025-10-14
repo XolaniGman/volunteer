@@ -10,7 +10,7 @@ import {
 import { WorkItem } from '@/types/workItem';
 import { WorkItemIcon } from './WorkItemIcon';
 import { StatusBadge } from './StatusBadge';
-import { MessageSquare, Calendar, Trash2, CheckCircle } from 'lucide-react';
+import { Calendar, CheckCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import {
   collection,
@@ -37,7 +37,7 @@ export const WorkItemsTable = ({
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [userName, setUserName] = useState<string | null>(null);
+  const [currentUserName, setCurrentUserName] = useState<string | null>(null);
 
   useEffect(() => {
     if (propWorkItems) {
@@ -63,6 +63,7 @@ export const WorkItemsTable = ({
     fetchWorkItems();
   }, [propWorkItems]);
 
+  // Fetch signed-in user name (for approvals)
   useEffect(() => {
     const fetchUserName = async () => {
       try {
@@ -72,13 +73,13 @@ export const WorkItemsTable = ({
           const profileRef = doc(db, 'profiles', user.uid);
           const profileSnap = await getDoc(profileRef);
           if (profileSnap.exists()) {
-            setUserName(profileSnap.data().displayName || user.email);
+            setCurrentUserName(profileSnap.data().displayName || user.email);
           } else {
-            setUserName(user.email);
+            setCurrentUserName(user.email);
           }
         }
       } catch {
-        setUserName(null);
+        setCurrentUserName(null);
       }
     };
     fetchUserName();
@@ -96,7 +97,6 @@ export const WorkItemsTable = ({
 
     try {
       await deleteDoc(doc(db, 'workItems', id));
-      // Re-fetch the workItems collection to sync UI
       const querySnapshot = await getDocs(collection(db, 'workItems'));
       const items: WorkItem[] = [];
       querySnapshot.forEach((docSnap) => {
@@ -112,10 +112,7 @@ export const WorkItemsTable = ({
 
   const handleApprove = async (e: React.MouseEvent, id: string) => {
     e.stopPropagation();
-    if (!id) {
-      console.error('❌ Invalid work item ID:', id);
-      return;
-    }
+    if (!id) return;
 
     let approvedComment = null;
     let approvedAt = undefined;
@@ -126,7 +123,7 @@ export const WorkItemsTable = ({
           if (item.state === 'done') {
             approvedComment = {
               id: Date.now().toString(),
-              author: 'system',
+              author: currentUserName || 'system',
               content: '✅',
               createdAt: new Date().toISOString(),
             };
@@ -166,125 +163,85 @@ export const WorkItemsTable = ({
 
   return (
     <div className="bg-card rounded-lg shadow-card border">
-      
       <Table>
         <TableHeader>
           <TableRow className="bg-muted/50">
-     
             <TableHead className="w-12"></TableHead>
             <TableHead>Title</TableHead>
             <TableHead>Assigned To</TableHead>
             <TableHead>State</TableHead>
-          
-           
             <TableHead>Activity Date</TableHead>
             <TableHead className="w-20">Approval</TableHead>
-
           </TableRow>
         </TableHeader>
         <TableBody>
           {workItems.map((item, index) => (
             <TableRow
-              key={item.id || `workItem-${index}`}
-              onClick={() => handleRowClick(item)}
-              className={cn(
-                'cursor-pointer hover:bg-muted/30 transition-colors',
-                selectedId === item.id && 'bg-azure-light'
-              )}
-            >
-           
-              <TableCell>
-                <WorkItemIcon type={item.type} />
-              </TableCell>
-              <TableCell className="max-w-64 truncate font-medium">{item.title}</TableCell>
-              <TableCell>
-                {item.assignedTo ? (
-                  <div className="flex items-center gap-2">
-                    <div className="w-6 h-6 bg-azure rounded-full flex items-center justify-center text-white text-xs">
-                      {userName
-                        ? userName.charAt(0).toUpperCase()
-                        : item.assignedTo.charAt(0).toUpperCase()}
-                    </div>
-                    <span className="text-sm">{userName || item.assignedTo}</span>
-                  </div>
-                ) : (
-                  <span className="text-muted-foreground">{item.createdBy || '-'}</span>
-                )}
-              </TableCell>
-              <TableCell>
-                <StatusBadge state={item.state} />
-              </TableCell>
-              
-              {/* <TableCell>
-                {'url' in item && item.url ? (
-                  <button
-                    className="px-2 py-1 bg-blue-500 text-white rounded text-xs hover:bg-blue-600"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      window.open(item.url as string, '_blank', 'noopener,noreferrer');
-                    }}
-                  >
-                    Open Link
-                  </button>
-                ) : (
-                  <span className="text-muted-foreground">-</span>
-                )}
-              </TableCell>
-              <TableCell>
-                {item.comments?.length ? (
-                  <div className="flex items-center gap-1 text-muted-foreground">
-                    <MessageSquare className="w-4 h-4" />
-                    {item.comments.some((c) => c.content === '✅') && (
-                      <span title="Approved" className="text-green-600 flex items-center">
-                        <CheckCircle className="w-4 h-4 mr-1" />
-                      </span>
-                    )}
-                    <span className="text-sm">
-                      {item.comments.filter((c) => c.content !== '✅').length > 0
-                        ? item.comments
-                            .filter((c) => c.content !== '✅')
-                            .map((c) => c.content)
-                            .join(', ')
-                        : item.comments.some((c) => c.content === '✅')
-                        ? ''
-                        : '0'}
-                    </span>
-                  </div>
-                ) : (
-                  <span className="text-muted-foreground">0</span>
-                )}
-              </TableCell> */}
-              <TableCell className="text-sm text-muted-foreground">
-                <div className="flex items-center gap-1">
-                  <Calendar className="w-4 h-4" />
-                  {item.activityDate
-                    ? new Date(item.activityDate).toLocaleDateString()
-                    : '-'}
-                </div>
-              </TableCell>
-              <TableCell>
-                {['done', 'doing', 'todo'].includes(item.state) && (
-                  <button
-                    className={
-                      item.state === 'done'
-                        ? item.approved
-                          ? 'px-2 py-1 bg-green-600 text-white rounded text-xs cursor-not-allowed'
-                          : 'px-2 py-1 bg-green-500 text-white rounded text-xs hover:bg-green-600'
-                        : 'px-2 py-1 bg-yellow-500 text-white rounded text-xs hover:bg-yellow-600'
-                    }
-                    disabled={item.state === 'done' && item.approved}
-                    onClick={(e) => {
-                      if (item.state === 'done' && !item.approved) {
-                        handleApprove(e, item.id);
-                      }
-                    }}
-                  >
-                    {item.state === 'done' && item.approved ? 'Approved' : 'Pending'}
-                  </button>
-                )}
-              </TableCell>
-           
-            </TableRow>
+  key={item.id || `workItem-${index}`}
+  onClick={() => handleRowClick(item)}
+  className={cn(
+    "cursor-pointer transition-all duration-200 ease-in-out transform hover:scale-[1.01] hover:shadow-sm",
+    selectedId === item.id
+      ? "bg-gradient-to-r from-indigo-50 via-purple-50 to-white border-l-4 border-indigo-600"
+      : "hover:bg-gradient-to-r hover:from-indigo-50 hover:to-purple-50"
+  )}
+>
+  <TableCell>
+    <WorkItemIcon type={item.type} />
+  </TableCell>
+
+  <TableCell className="max-w-64 truncate font-semibold text-gray-800">
+    {item.title}
+  </TableCell>
+
+  <TableCell>
+    {item.assignedTo ? (
+      <div className="flex items-center gap-2">
+        <div className="w-7 h-7 bg-gradient-to-r from-indigo-500 to-purple-500 rounded-full flex items-center justify-center text-white text-xs font-bold shadow-md">
+          {item.assignedTo.charAt(0).toUpperCase()}
+        </div>
+        <span className="text-sm text-gray-700">{item.assignedTo}</span>
+      </div>
+    ) : (
+      <span className="text-gray-400 italic">{item.createdBy || "-"}</span>
+    )}
+  </TableCell>
+
+  <TableCell>
+    <StatusBadge state={item.state} />
+  </TableCell>
+
+  <TableCell className="text-sm text-gray-600 flex items-center gap-1">
+    <Calendar className="w-4 h-4 text-indigo-500" />
+    {item.activityDate
+      ? new Date(item.activityDate).toLocaleDateString()
+      : "-"}
+  </TableCell>
+
+  <TableCell>
+    {["done", "doing", "todo"].includes(item.state) && (
+      <button
+        className={cn(
+          "px-3 py-1 rounded-lg text-xs font-medium transition-colors duration-200",
+          item.state === "done"
+            ? item.approved
+              ? "bg-green-600 text-white cursor-not-allowed"
+              : "bg-green-500 text-white hover:bg-green-600"
+            : "bg-yellow-400 text-white hover:bg-yellow-500"
+        )}
+        disabled={item.state === "done" && item.approved}
+        onClick={(e) => {
+          if (item.state === "done" && !item.approved) {
+            handleApprove(e, item.id);
+          }
+        }}
+      >
+        {item.state === "done" && item.approved ? "Approved ✅" : "Pending ⏳"}
+      </button>
+    )}
+  </TableCell>
+</TableRow>
+
           ))}
         </TableBody>
       </Table>

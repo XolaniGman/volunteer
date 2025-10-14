@@ -128,7 +128,7 @@ const Login = () => {
       {/* Right side - image */}
       <div className="flex-1 hidden md:flex items-center justify-center p-8">
         <img
-          src="/asserts/DUTENVLOGO1.jpg" // Replace with your image
+          src="/asserts/DUTENVLOGO1.png" // Replace with your image
           alt="Login Illustration"
           className="rounded-2xl shadow-lg max-h-[500px] object-cover"
         />

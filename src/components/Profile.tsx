@@ -2,11 +2,13 @@ import { useEffect, useState } from "react";
 import { getAuth } from "firebase/auth";
 import { db } from "@/lib/firebase";
 import { doc, getDoc, setDoc, updateDoc, deleteDoc } from "firebase/firestore";
+import { getDownloadURL, ref, uploadBytes } from "firebase/storage";
 
 import { Mail, Phone, MapPin, Calendar, User } from "lucide-react";
 import { DashboardHeader } from "./Dashboard/DashboardHeader";
 import { WorkItemFilter } from "@/types/workItem";
 import VolunteerWorkOrder from "../pages/VolunteerWorkOrder";
+import { NavLink } from "react-router-dom";
 
 interface ProfileData {
   uid: string;
@@ -23,6 +25,7 @@ interface ProfileData {
   city?: string;
   medicalAid?: boolean;
   medicalAidName?: string;
+  photoURL?: string;
 }
 
 const defaultFilter: WorkItemFilter = {
@@ -39,6 +42,7 @@ const Profile = () => {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [filter, setFilter] = useState<WorkItemFilter>(defaultFilter);
+  const [uploading, setUploading] = useState(false);
 
   const auth = getAuth();
   const user = auth.currentUser;
@@ -64,6 +68,15 @@ const Profile = () => {
     };
     fetchProfile();
   }, [user]);
+
+  useEffect(() => {
+    if (profile?.uid) {
+      const localImg = localStorage.getItem(`profileImage_${profile.uid}`);
+      if (localImg) {
+        setProfile((prev) => prev ? { ...prev, photoURL: localImg } : prev);
+      }
+    }
+  }, [profile?.uid]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!profile) return;
@@ -100,6 +113,20 @@ const Profile = () => {
     }
   };
 
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!e.target.files || e.target.files.length === 0) return;
+    const file = e.target.files[0];
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      const base64 = reader.result as string;
+      // Save to localStorage
+      localStorage.setItem(`profileImage_${profile?.uid}`, base64);
+      // Update profile state
+      setProfile((prev) => prev ? { ...prev, photoURL: base64 } : prev);
+    };
+    reader.readAsDataURL(file);
+  };
+
   if (loading) return <div>Loading...</div>;
   if (!user || !profile) return <div>Please log in to view your profile.</div>;
 
@@ -120,18 +147,30 @@ const Profile = () => {
               {/* Left Sidebar */}
               <div className="w-1/3 border-r p-6 bg-gray-50">
                 {/* Avatar */}
-                <div className="h-36 w-36 rounded-lg overflow-hidden mx-auto shadow-md">
+                <div className="h-36 w-36 rounded-lg overflow-hidden mx-auto shadow-md relative group">
                   <img
-                    src="https://via.placeholder.com/150"
+                    src={profile.photoURL || "https://via.placeholder.com/150"}
                     alt={profile.displayName}
                     className="h-full w-full object-cover"
                   />
+                  {editMode && (
+                    <label className="absolute inset-0 bg-black/40 flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer">
+                      <span className="text-white text-xs mb-1">{uploading ? "Uploading..." : "Change"}</span>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={handleImageUpload}
+                        disabled={uploading}
+                      />
+                    </label>
+                  )}
                 </div>
 
                 {/* Work Section */}
                 <div className="mt-6">
                   <h3 className="text-sm font-semibold text-gray-700 uppercase tracking-wide mb-2">
-                    SCHOOL
+                   Academic Information
                   </h3>
                   <ul className="space-y-2 text-sm text-gray-600">
                     <li className="space-y-2 p-2 border-b font-medium">
@@ -329,13 +368,20 @@ const Profile = () => {
                       >
                         Edit Profile
                       </button>
-                      <button
-                        className="px-4 py-2 bg-red-600 text-white rounded-md text-sm font-medium hover:bg-red-700"
-                        onClick={handleDelete}
-                        disabled={saving}
-                      >
-                        Delete Profile
-                      </button>
+                      
+                         <NavLink
+                    to="/proof"
+                    className="px-4 py-2 bg-purple-600 text-white rounded-md text-sm font-medium hover:bg-purple-700 inline-block"
+                  >
+                    View Contract
+                  </NavLink>
+          <NavLink
+                    to="/faculty-report"
+                    className="px-4 py-2 bg-purple-900 text-white rounded-md text-sm font-medium hover:bg-purple-700 inline-block"
+                  >
+                    Faculty Report
+                  </NavLink>
+                 
                     </>
                   )}
                 </div>
@@ -493,8 +539,7 @@ const Profile = () => {
             </div>
 
           </div>
-          {/* Volunteer Work Order Section */}
-      <VolunteerWorkOrder />
+          
         </div>
       </div>
     </>

@@ -1,7 +1,13 @@
-import { useEffect, useState } from 'react';
-import { collection, getDocs, doc, getDoc, query, where } from 'firebase/firestore';
+import React, { useEffect, useState } from 'react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import SignaturePad from '@/components/SignaturePad';
+import { collection, getDocs, doc, getDoc, query, where, deleteDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { WorkItemsTable } from './work-item/WorkItemsTable';
+import { getAuth } from 'firebase/auth';
+import { Trash2 } from 'lucide-react';
 
 interface UserProfile {
   uid: string;
@@ -20,7 +26,10 @@ interface UserProfile {
   physicalAddressLine2?: string;
 }
 
-// Helper component to fetch and filter work items by createdBy
+
+// Remove the above hooks from the top level. Move them inside MembersTable:
+
+// (Removed duplicate MembersTable definition. The correct one is below, starting at line 172.)
 function FilteredWorkItemsTableForUser({
   userEmail,
   onClose,
@@ -155,23 +164,55 @@ function UserProof({ userEmail, onClose }: { userEmail: string; onClose: () => v
   );
 }
 
+
 const MembersTable = () => {
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedUser, setSelectedUser] = useState<UserProfile | null>(null);
   const [proofUser, setProofUser] = useState<UserProfile | null>(null);
   const [search, setSearch] = useState("");
+  // Signature dialog state (must be inside the component)
+  const [signUser, setSignUser] = useState<UserProfile | null>(null);
+  const [showSignaturePad, setShowSignaturePad] = useState(false);
+  const [volunteerSignature, setVolunteerSignature] = useState("");
 
   useEffect(() => {
     const fetchUsers = async () => {
-      const querySnapshot = await getDocs(collection(db, 'profiles'));
+      const auth = getAuth();
+      const adminEmail = auth.currentUser?.email; // current admin logged in
+
+      if (!adminEmail) {
+        setLoading(false);
+        return;
+      }
+
+      // First fetch groups created by this admin
+      const groupsSnapshot = await getDocs(
+        query(collection(db, 'groups'), where('createdBy', '==', adminEmail))
+      );
+
+      if (groupsSnapshot.empty) {
+        setUsers([]);
+        setLoading(false);
+        return;
+      }
+
+      const adminGroups: string[] = groupsSnapshot.docs.map(doc => doc.data().groupName);
+
+      // Now fetch users whose groupName is in those groups
+      const profilesSnapshot = await getDocs(
+        query(collection(db, 'profiles'), where('groupName', 'in', adminGroups))
+      );
+
       const usersData: UserProfile[] = [];
-      querySnapshot.forEach((doc) => {
+      profilesSnapshot.forEach((doc) => {
         usersData.push({ uid: doc.id, ...doc.data() } as UserProfile);
       });
+
       setUsers(usersData);
       setLoading(false);
     };
+
     fetchUsers();
   }, []);
 
@@ -183,76 +224,166 @@ const MembersTable = () => {
 
   if (loading) return <div>Loading...</div>;
 
+  // Utility function to join class names conditionally
+  function cn(...classes: (string | false | null | undefined)[]): string {
+    return classes.filter(Boolean).join(' ');
+  }
+
+  async function handleDelete(e: React.MouseEvent<HTMLButtonElement>, uid: string): Promise<void> {
+      e.preventDefault();
+      if (!window.confirm('Are you sure you want to delete this user?')) return;
+      try {
+        await deleteDoc(doc(db, 'profiles', uid));
+        setUsers((prev) => prev.filter((user) => user.uid !== uid));
+      } catch (error) {
+        alert('Failed to delete user.');
+        // Optionally log error
+        // console.error(error);
+      }
+    }
+
   return (
     <div className="overflow-x-auto">
-      <div className="mb-4 flex justify-end">
-        <input
-          type="text"
-          placeholder="Search by name or email..."
-          value={search}
-          onChange={e => setSearch(e.target.value)}
-          className="border rounded px-3 py-2 w-64"
+  {/* Search Input */}
+  <div className="mb-4 flex justify-end">
+    <input
+      type="text"
+      placeholder="Search by name or email..."
+      value={search}
+      onChange={(e) => setSearch(e.target.value)}
+      className="border rounded px-3 py-2 w-64"
+    />
+  </div>
+
+  {/* Table */}
+  <table className="min-w-full bg-white text-sm text-left text-gray-700 rounded-lg shadow-lg overflow-hidden">
+    <thead className="bg-gradient-to-r from-purple-500 to-purple-700 text-white">
+      <tr>
+        <th className="px-4 py-3 font-semibold">Display Name</th>
+        <th className="px-4 py-3 font-semibold">Email</th>
+        <th className="px-4 py-3 font-semibold">Department</th>
+        <th className="px-4 py-3 font-semibold">Student Number</th>
+        <th className="px-4 py-3 font-semibold">ID Number</th>
+        <th className="px-4 py-3 font-semibold text-center">Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+      {filteredUsers.map((user, index) => (
+        <tr
+          key={user.uid || `user-${index}`}
+          className={cn(
+            `${index % 2 === 0 ? "bg-gray-50" : "bg-white"} 
+            hover:bg-purple-50 transition-all duration-300 ease-in-out transform hover:scale-[1.01] hover:shadow-sm`
+          )}
+        >
+          {/* Display Name */}
+          <td className="border-b px-4 py-3 max-w-64 truncate font-medium">{user.displayName || "-"}</td>
+          
+          {/* Email */}
+          <td className="border-b px-4 py-3">{user.email}</td>
+
+          {/* Department */}
+          <td className="border-b px-4 py-3">{user.department || "-"}</td>
+
+          {/* Student Number */}
+          <td className="border-b px-4 py-3">{user.studentOrStaffNumber || "-"}</td>
+
+          {/* ID Number */}
+          <td className="border-b px-4 py-3">{user.idNumber || "-"}</td>
+
+          {/* Actions */}
+          <td className="border-b px-4 py-3 flex gap-2 justify-center">
+            {/* View Work Items */}
+            <button
+              className="px-3 py-1 bg-blue-500 text-white rounded-full text-xs font-medium hover:bg-blue-600 transition"
+              onClick={() => setSelectedUser(user)}
+            >
+              View Work Items
+            </button>
+
+            {/* View Proof */}
+            <button
+              className="px-3 py-1 bg-green-500 text-white rounded-full text-xs font-medium hover:bg-green-600 transition"
+              onClick={() => setProofUser(user)}
+            >
+              View Proof
+            </button>
+
+            {/* Sign */}
+            <button
+              className="px-3 py-1 bg-purple-500 text-white rounded-full text-xs font-medium hover:bg-purple-600 transition"
+              onClick={() => {
+                setSignUser(user);
+                setShowSignaturePad(true);
+                setVolunteerSignature("");
+              }}
+            >
+              Sign
+            </button>
+            
+            {/* Delete */}
+            <button
+              onClick={(e) => handleDelete(e, user.uid)}
+              className="p-1 text-red-500 hover:text-red-700 transition"
+            >
+              <Trash2 className="w-4 h-4" />
+            </button>
+          </td>
+        </tr>
+      ))}
+    </tbody>
+  </table>
+
+  {/* Display Work Items Table for Selected User */}
+  {selectedUser && (
+    <FilteredWorkItemsTableForUser
+      userEmail={selectedUser.email}
+      onClose={() => setSelectedUser(null)}
+      displayName={selectedUser.displayName || selectedUser.uid}
+    />
+  )}
+
+  {/* Display User Proof */}
+  {proofUser && (
+    <UserProof
+      userEmail={proofUser.email}
+      onClose={() => setProofUser(null)}
+    />
+  )}
+
+  {/* Signature Pad Dialog for Sign button */}
+  <Dialog open={!!showSignaturePad} onOpenChange={setShowSignaturePad}>
+    <DialogContent>
+      <DialogHeader>
+        <DialogTitle>Volunteer Signature (Draw below or type)</DialogTitle>
+      </DialogHeader>
+      <div className="space-y-2">
+        <SignaturePad value={volunteerSignature} onChange={setVolunteerSignature} />
+        <Input
+          className="mt-2"
+          placeholder="Type your full name as signature (optional)"
+          value={volunteerSignature}
+          onChange={(e) => setVolunteerSignature(e.target.value)}
         />
       </div>
-   <table className="min-w-full bg-white text-sm text-left text-gray-700 rounded-lg shadow-lg overflow-hidden">
-  <thead className="bg-gradient-to-r from-purple-500 to-purple-700 text-white">
-    <tr>
-      <th className="px-4 py-3 font-semibold">Display Name</th>
-      <th className="px-4 py-3 font-semibold">Email</th>
-      <th className="px-4 py-3 font-semibold">Department</th>
-      <th className="px-4 py-3 font-semibold">Student Number</th>
-      <th className="px-4 py-3 font-semibold">ID Number</th>
-      <th className="px-4 py-3 font-semibold text-center">Actions</th>
-    </tr>
-  </thead>
-  <tbody>
-    {filteredUsers.map((user, index) => (
-      <tr
-        key={user.uid || `user-${index}`}
-        className={`${
-          index % 2 === 0 ? "bg-gray-50" : "bg-white"
-        } hover:bg-purple-50 transition`}
-      >
-        <td className="border-b px-4 py-3">{user.displayName || "-"}</td>
-        <td className="border-b px-4 py-3">{user.email}</td>
-        <td className="border-b px-4 py-3">{user.department || "-"}</td>
-        <td className="border-b px-4 py-3">{user.studentOrStaffNumber || "-"}</td>
-        <td className="border-b px-4 py-3">{user.idNumber || "-"}</td>
-        
-        <td className="border-b px-4 py-3 flex gap-2 justify-center">
-          <button
-            className="px-3 py-1 bg-blue-500 text-white rounded-full text-xs font-medium hover:bg-blue-600 transition"
-            onClick={() => setSelectedUser(user)}
-          >
-            View Work Items
-          </button>
-          <button
-            className="px-3 py-1 bg-green-500 text-white rounded-full text-xs font-medium hover:bg-green-600 transition"
-            onClick={() => setProofUser(user)}
-          >
-            View Proof
-          </button>
-        </td>
-      </tr>
-    ))}
-  </tbody>
-</table>
+      <DialogFooter>
+        <Button
+          onClick={async () => {
+            setShowSignaturePad(false);
+            // TODO: Save signature for signUser here
+          }}
+          disabled={!volunteerSignature}
+        >
+          Continue
+        </Button>
+        <Button variant="outline" onClick={() => setShowSignaturePad(false)}>
+          Cancel
+        </Button>
+      </DialogFooter>
+    </DialogContent>
+  </Dialog>
+</div>
 
-
-      {selectedUser && (
-        <FilteredWorkItemsTableForUser
-          userEmail={selectedUser.email}
-          onClose={() => setSelectedUser(null)}
-          displayName={selectedUser.displayName || selectedUser.uid}
-        />
-      )}
-      {proofUser && (
-        <UserProof
-          userEmail={proofUser.email}
-          onClose={() => setProofUser(null)}
-        />
-      )}
-    </div>
   );
 };
 
