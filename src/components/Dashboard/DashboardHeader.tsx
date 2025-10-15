@@ -147,7 +147,7 @@ export const DashboardHeader = ({
               <motion.button
                 whileHover={{ scale: 1.05, backgroundColor: '#fff3' }}
                 onClick={handleProfile}
-                className="flex items-center gap-2 bg-white/20 px-4 py-2 l border border-white/30 hover:border-white/50 transition-all font-semibold"
+                className="flex items-center gap-2 bg-white/20 px-4 py-2 rounded-xl border border-white/30 hover:border-white/50 transition-all font-semibold"
               >
                 <User className="w-4 h-4" />
                 Profile
@@ -157,7 +157,7 @@ export const DashboardHeader = ({
                 whileHover={{ scale: 1.05, backgroundColor: '#f87171' }}
                 whileTap={{ scale: 0.95 }}
                 onClick={handleSignOut}
-                className="bg-gradient-to-r from-rose-4 to-rose-700 px-5 py-2  font-semibold shadow border border-transparent hover:shadow-lg transition-all"
+                className="bg-gradient-to-r from-purple-500 to-indigo-500 px-5 py-2 rounded-xl  font-semibold shadow border text-white flex items-center gap-1"
               >
                 Sign Out
               </motion.button>
